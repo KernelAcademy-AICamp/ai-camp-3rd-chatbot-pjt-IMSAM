@@ -11,6 +11,7 @@
   "dependencies": {
     "next": "16.0.6",
     "openai": "^6.9.1",
+    "pnpm": "^10.24.0",
     "react": "19.2.0",
     "react-dom": "19.2.0"
   },
