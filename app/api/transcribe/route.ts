@@ -19,7 +19,7 @@ const TEST_MODE = process.env.TEST_MODE === "true";
 const openai = TEST_MODE
   ? null
   : new OpenAI({
-      apiKey: process.env.OPENAI_KEY,
+      apiKey: process.env.OPENAI_API_KEY || process.env.OPENAI_KEY,
     });
 
 export async function POST(request: NextRequest) {
@@ -62,6 +62,7 @@ export async function POST(request: NextRequest) {
       const transcription = await openai.audio.transcriptions.create({
         model: "whisper-1",
         file: fs.createReadStream(tempFilePath),
+        language: "ko",
       });
 
       transcriptionText = transcription.text;

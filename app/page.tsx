@@ -1,43 +1,39 @@
-import Image from "next/image";
-import AudioRecorder from "./components/AudioRecorder";
+"use client";
 
-export default function Home() {
+import { useEffect } from "react";
+import { Navigation } from "@/components/layout/Navigation";
+import { HeroSection } from "@/components/sections/HeroSection";
+import { ProductSection } from "@/components/sections/ProductSection";
+import { VoiceSystemSection } from "@/components/sections/VoiceSystemSection";
+import { InterviewersSection } from "@/components/sections/InterviewersSection";
+import { FlowSection } from "@/components/sections/FlowSection";
+import { AnalyticsSection } from "@/components/sections/AnalyticsSection";
+import { SecuritySection } from "@/components/sections/SecuritySection";
+import { CaseStudySection } from "@/components/sections/CaseStudySection";
+import { AboutSection } from "@/components/sections/AboutSection";
+import { FooterSection } from "@/components/sections/FooterSection";
+
+export default function HomePage() {
+  useEffect(() => {
+    // Add dark class to html element for dark mode default
+    document.documentElement.classList.add("dark");
+  }, []);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image className="dark:invert" src="/next.svg" alt="Next.js logo" width={100} height={20} priority />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            음성 인터뷰 녹음 및 텍스트 변환
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            버튼을 클릭하여 음성을 녹음하고, AI가 자동으로 텍스트로 변환합니다.
-          </p>
-        </div>
-
-        {/* STT 컴포넌트 */}
-        <AudioRecorder />
-
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image className="dark:invert" src="/vercel.svg" alt="Vercel logomark" width={16} height={16} />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
+      <Navigation />
+      <main>
+        <HeroSection />
+        <ProductSection />
+        <VoiceSystemSection />
+        <InterviewersSection />
+        <FlowSection />
+        <AnalyticsSection />
+        <SecuritySection />
+        <CaseStudySection />
+        <AboutSection />
       </main>
+      <FooterSection />
     </div>
   );
 }
