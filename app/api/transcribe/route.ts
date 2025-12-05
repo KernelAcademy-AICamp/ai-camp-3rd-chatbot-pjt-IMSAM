@@ -22,12 +22,10 @@ const openai = TEST_MODE
       apiKey: process.env.OPENAI_API_KEY || process.env.OPENAI_KEY,
     });
 
-export async function POST(request: NextRequest) {
-  let tempFilePath: string | null = null;
-
+export async function POST(req: NextRequest) {
   try {
-    // 1. FormData에서 오디오 파일 가져오기
-    const formData = await request.formData();
+        // 1. FormData에서 오디오 파일 가져오기
+    const formData = await req.formData();
     const audioFile = formData.get("audio") as File;
 
     if (!audioFile) {
@@ -38,7 +36,7 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await audioFile.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    let transcriptionText: string;
+    let transcriptionText: string = "";
 
     // 3. OpenAI Whisper API로 음성→텍스트 변환 (또는 테스트 모드)
     if (TEST_MODE) {
@@ -52,16 +50,9 @@ export async function POST(request: NextRequest) {
         throw new Error("OpenAI client is not initialized");
       }
 
-      // Vercel serverless 환경에서는 /tmp 디렉토리 사용
-      const tempDir = os.tmpdir();
-      tempFilePath = path.join(tempDir, `audio_${Date.now()}.wav`);
-
-      // 임시 파일 저장 (OpenAI API는 파일 스트림 필요)
-      fs.writeFileSync(tempFilePath, buffer);
-
-      const transcription = await openai.audio.transcriptions.create({
+      const transcription = await openai!.audio.transcriptions.create({
         model: "whisper-1",
-        file: fs.createReadStream(tempFilePath),
+        file: new File([buffer], "audio.wav", { type: "audio/wav" }),
         language: "ko",
       });
 
@@ -75,24 +66,15 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString(),
       testMode: TEST_MODE,
     });
-  } catch (error) {
-    console.error("Transcription error:", error);
+  } catch (err: any) {
+    console.error("STT Error:", err);
 
     return NextResponse.json(
       {
-        error: "음성 변환 중 오류가 발생했습니다.",
-        details: error instanceof Error ? error.message : "Unknown error",
+        error: "음성 변환 중 오류 발생",
+        details: err.message || err,
       },
       { status: 500 },
     );
-  } finally {
-    // 임시 파일 정리
-    if (tempFilePath && fs.existsSync(tempFilePath)) {
-      try {
-        fs.unlinkSync(tempFilePath);
-      } catch (err) {
-        console.error("임시 파일 삭제 실패:", err);
-      }
-    }
   }
 }
