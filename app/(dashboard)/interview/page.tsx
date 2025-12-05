@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,13 +9,24 @@ import {
   Phone,
   Volume2,
   VolumeX,
-  MessageCircle,
   User,
 } from "lucide-react";
 
 interface TranscriptionResponse {
   success: boolean;
   text: string;
+  timestamp: string;
+  error?: string;
+}
+
+interface InterviewResponse {
+  success: boolean;
+  response: string;
+  interviewer: {
+    id: string;
+    name: string;
+    role: string;
+  };
   timestamp: string;
   error?: string;
 }
@@ -45,6 +56,12 @@ export default function InterviewPage() {
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // 메시지 스크롤
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const startRecording = async () => {
     try {
@@ -63,7 +80,7 @@ export default function InterviewPage() {
 
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: "audio/wav" });
-        await transcribeAudio(audioBlob);
+        await processUserResponse(audioBlob);
         stream.getTracks().forEach((track) => track.stop());
       };
 
@@ -82,79 +99,156 @@ export default function InterviewPage() {
     }
   };
 
-  const transcribeAudio = async (audioBlob: Blob) => {
+  // STT + LLM 처리
+  const processUserResponse = async (audioBlob: Blob) => {
     try {
       setIsProcessing(true);
       setError("");
 
+      // 1. STT - 음성을 텍스트로 변환
       const formData = new FormData();
       formData.append("audio", audioBlob, "recording.wav");
 
-      const response = await fetch("/api/transcribe", {
+      const sttResponse = await fetch("/api/transcribe", {
         method: "POST",
         body: formData,
       });
 
-      const data: TranscriptionResponse = await response.json();
+      const sttData: TranscriptionResponse = await sttResponse.json();
 
-      if (data.success) {
-        // Add user message
-        const userMessage: Message = {
-          id: Date.now().toString(),
-          role: "user",
-          content: data.text,
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, userMessage]);
-
-        // Simulate AI response (in real app, this would call the LLM)
-        setTimeout(() => {
-          const aiMessage: Message = {
-            id: (Date.now() + 1).toString(),
-            role: "interviewer",
-            content: getAIResponse(data.text),
-            interviewer: currentInterviewer,
-            timestamp: new Date(),
-          };
-          setMessages((prev) => [...prev, aiMessage]);
-
-          // Rotate interviewer
-          const currentIndex = interviewers.findIndex((i) => i.id === currentInterviewer.id);
-          setCurrentInterviewer(interviewers[(currentIndex + 1) % interviewers.length]);
-        }, 1500);
-      } else {
-        setError(data.error || "변환 실패");
+      if (!sttData.success) {
+        setError(sttData.error || "음성 변환 실패");
+        return;
       }
+
+      // 사용자 메시지 추가
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        role: "user",
+        content: sttData.text,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, userMessage]);
+
+      // 2. LLM - 면접관 응답 생성
+      const conversationHistory = messages.map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+        interviewerId: msg.interviewer?.id,
+      }));
+
+      const llmResponse = await fetch("/api/interview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userMessage: sttData.text,
+          interviewerId: currentInterviewer.id,
+          conversationHistory,
+          position: "개발자",
+        }),
+      });
+
+      const llmData: InterviewResponse = await llmResponse.json();
+
+      if (!llmData.success) {
+        setError(llmData.error || "면접관 응답 생성 실패");
+        return;
+      }
+
+      // 면접관 응답 메시지 추가
+      const aiMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "interviewer",
+        content: llmData.response,
+        interviewer: currentInterviewer,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, aiMessage]);
+
+      // 다음 면접관으로 순환 (가중치 기반)
+      rotateInterviewer();
+
     } catch (err) {
-      console.error("Transcription error:", err);
+      console.error("Processing error:", err);
       setError("서버와 통신 중 오류가 발생했습니다.");
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const getAIResponse = (userInput: string): string => {
-    // Mock responses - in real app, this would use LLM
-    const responses = [
-      "좋은 답변이네요. 조금 더 구체적인 예시를 들어주시겠어요?",
-      "그 경험에서 가장 어려웠던 점은 무엇이었나요?",
-      "해당 기술을 선택한 이유와 트레이드오프에 대해 설명해주세요.",
-      "팀원들과 협업할 때 갈등이 있었다면 어떻게 해결하셨나요?",
-      "그 프로젝트의 성과를 수치로 표현할 수 있을까요?",
-    ];
-    return responses[Math.floor(Math.random() * responses.length)];
+  // 면접관 순환 (가중치: 실무팀장 40%, HR 20%, 시니어 40%)
+  const rotateInterviewer = () => {
+    const random = Math.random();
+    let nextInterviewer;
+
+    // 같은 면접관이 연속으로 2번 이상 나오지 않도록
+    const otherInterviewers = interviewers.filter(
+      (i) => i.id !== currentInterviewer.id
+    );
+
+    if (random < 0.5) {
+      // 50% 확률로 실무팀장 또는 시니어 (둘 다 40% 비중)
+      nextInterviewer =
+        otherInterviewers.find((i) => i.id === "tech-lead") ||
+        otherInterviewers.find((i) => i.id === "senior-peer") ||
+        otherInterviewers[0];
+    } else if (random < 0.7) {
+      // 20% 확률로 HR
+      nextInterviewer =
+        otherInterviewers.find((i) => i.id === "hr-manager") ||
+        otherInterviewers[0];
+    } else {
+      // 30% 확률로 시니어 또는 실무팀장
+      nextInterviewer =
+        otherInterviewers.find((i) => i.id === "senior-peer") ||
+        otherInterviewers.find((i) => i.id === "tech-lead") ||
+        otherInterviewers[0];
+    }
+
+    setCurrentInterviewer(nextInterviewer);
   };
 
-  const startInterview = () => {
+  const startInterview = async () => {
     setIsInterviewStarted(true);
-    const welcomeMessage: Message = {
-      id: "welcome",
-      role: "interviewer",
-      content: "안녕하세요! 오늘 면접을 진행할 면접관들입니다. 간단한 자기소개부터 시작해볼까요?",
-      interviewer: interviewers[0],
-      timestamp: new Date(),
-    };
-    setMessages([welcomeMessage]);
+    setIsProcessing(true);
+
+    try {
+      // 첫 질문을 LLM에서 생성
+      const llmResponse = await fetch("/api/interview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userMessage: "[면접 시작] 지원자가 입장했습니다.",
+          interviewerId: "tech-lead",
+          conversationHistory: [],
+          position: "개발자",
+        }),
+      });
+
+      const llmData: InterviewResponse = await llmResponse.json();
+
+      const welcomeMessage: Message = {
+        id: "welcome",
+        role: "interviewer",
+        content: llmData.success
+          ? llmData.response
+          : "안녕하세요! 오늘 면접을 진행할 면접관들입니다. 간단한 자기소개부터 시작해볼까요?",
+        interviewer: interviewers[0],
+        timestamp: new Date(),
+      };
+      setMessages([welcomeMessage]);
+    } catch {
+      const welcomeMessage: Message = {
+        id: "welcome",
+        role: "interviewer",
+        content: "안녕하세요! 오늘 면접을 진행할 면접관들입니다. 간단한 자기소개부터 시작해볼까요?",
+        interviewer: interviewers[0],
+        timestamp: new Date(),
+      };
+      setMessages([welcomeMessage]);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const endInterview = () => {
@@ -183,7 +277,7 @@ export default function InterviewPage() {
                 <p className="text-sm font-medium text-foreground">{interviewer.name}</p>
                 <p className="text-xs text-muted-foreground">{interviewer.role}</p>
               </div>
-              {currentInterviewer.id === interviewer.id && (
+              {currentInterviewer.id === interviewer.id && isProcessing && (
                 <div className="voice-wave">
                   {[...Array(3)].map((_, i) => (
                     <span key={i} style={{ height: `${8 + i * 4}px` }} />
@@ -310,6 +404,7 @@ export default function InterviewPage() {
                   </div>
                 </motion.div>
               )}
+              <div ref={messagesEndRef} />
             </div>
 
             {/* Error Message */}
