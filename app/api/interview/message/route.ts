@@ -94,10 +94,10 @@ export async function POST(req: NextRequest) {
       .eq('session_id', session_id)
       .order('created_at', { ascending: true });
 
-    const conversationHistory: ChatMessage[] = (historyData || []).map(msg => ({
+    const conversationHistory: ChatMessage[] = (historyData || []).map((msg: { role: string; content: string }) => ({
       role: msg.role === 'user' ? 'user' : 'assistant',
       content: msg.content,
-    }));
+    })) as ChatMessage[];
 
     // Add current message
     conversationHistory.push({ role: 'user', content });
