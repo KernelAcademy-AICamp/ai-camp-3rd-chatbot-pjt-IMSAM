@@ -78,7 +78,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const supabase = createServerClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServerClient() as any;
 
     // Type for session
     interface SessionRow {
