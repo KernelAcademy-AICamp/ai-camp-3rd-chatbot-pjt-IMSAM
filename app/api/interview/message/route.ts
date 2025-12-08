@@ -54,12 +54,15 @@ function selectNextInterviewer(
 
 export async function POST(req: NextRequest) {
   const startTime = Date.now();
+  console.log('=== Interview Message API: Started ===');
 
   try {
     const body = await req.json();
     const { session_id, content, audio_url } = body;
+    console.log('Request body:', { session_id, content: content?.substring(0, 50), audio_url });
 
     if (!session_id || !content) {
+      console.error('Missing required fields:', { session_id, hasContent: !!content });
       return NextResponse.json(
         { success: false, error: '세션 ID와 메시지가 필요합니다.' },
         { status: 400 }
@@ -67,6 +70,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Create Supabase client with cookies for auth
+    console.log('Creating Supabase client...');
     const cookieStore = await cookies();
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -90,6 +94,7 @@ export async function POST(req: NextRequest) {
     );
 
     // Get session
+    console.log('Fetching session:', session_id);
     const { data: session, error: sessionError } = await supabase
       .from('interview_sessions')
       .select('*')
@@ -97,13 +102,21 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (sessionError || !session) {
+      console.error('Session fetch error:', sessionError);
       return NextResponse.json(
         { success: false, error: '세션을 찾을 수 없습니다.' },
         { status: 404 }
       );
     }
 
+    console.log('Session found:', { 
+      id: session.id, 
+      status: (session as { status: string }).status,
+      turn_count: session.turn_count 
+    });
+
     if ((session as { status: string }).status !== 'active') {
+      console.error('Session not active:', (session as { status: string }).status);
       return NextResponse.json(
         { success: false, error: '면접이 진행 중이 아닙니다.' },
         { status: 400 }
@@ -111,6 +124,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Save user message
+    console.log('Saving user message...');
     const { data: userMessage, error: userMsgError } = await supabase
       .from('messages')
       .insert({
@@ -124,21 +138,31 @@ export async function POST(req: NextRequest) {
 
     if (userMsgError) {
       console.error('User message save error:', userMsgError);
+      throw new Error(`Failed to save user message: ${userMsgError.message}`);
     }
+    console.log('User message saved:', userMessage?.id);
 
-    // Get conversation history
-    const { data: historyData } = await supabase
+    // Get conversation history (excluding current message to avoid race condition)
+    console.log('Fetching conversation history...');
+    const { data: historyData, error: historyError } = await supabase
       .from('messages')
       .select('role, content, interviewer_id')
       .eq('session_id', session_id)
+      .neq('id', userMessage?.id || '') // Exclude the just-saved message
       .order('created_at', { ascending: true });
 
+    if (historyError) {
+      console.error('History fetch error:', historyError);
+      throw new Error(`Failed to fetch history: ${historyError.message}`);
+    }
+
+    // Build conversation history
     const conversationHistory: ChatMessage[] = (historyData || []).map((msg: { role: string; content: string }) => ({
       role: msg.role === 'user' ? 'user' : 'assistant',
       content: msg.content,
     })) as ChatMessage[];
 
-    // Add current message
+    // Add current user message explicitly
     conversationHistory.push({ role: 'user', content });
 
     // Select next interviewer with enhanced follow-up logic
@@ -162,6 +186,7 @@ export async function POST(req: NextRequest) {
     const contextParts: string[] = [];
 
     if (session.resume_doc_id) {
+      console.log('Fetching RAG context for resume:', session.resume_doc_id);
       try {
         const resumeContext = await ragService.getContextForInterview(
           session.user_id,
@@ -231,8 +256,14 @@ export async function POST(req: NextRequest) {
         interviewerMbti,
       }
     );
+    console.log('LLM response generated:', {
+      contentLength: llmResponse.content.length,
+      hasStructured: !!llmResponse.structuredResponse,
+      latency: llmResponse.latencyMs
+    });
 
     // Save interviewer message
+    console.log('Saving interviewer message...');
     const { data: interviewerMessage, error: intMsgError } = await supabase
       .from('messages')
       .insert({
@@ -248,13 +279,16 @@ export async function POST(req: NextRequest) {
 
     if (intMsgError) {
       console.error('Interviewer message save error:', intMsgError);
+      throw new Error(`Failed to save interviewer message: ${intMsgError.message}`);
     }
+    console.log('Interviewer message saved:', interviewerMessage?.id);
 
     // Update session
     const newTurnCount = session.turn_count + 1;
     const shouldEnd = newTurnCount >= session.max_turns;
+    console.log('Updating session:', { newTurnCount, shouldEnd });
 
-    await supabase
+    const { error: updateError } = await supabase
       .from('interview_sessions')
       .update({
         turn_count: newTurnCount,
@@ -262,6 +296,14 @@ export async function POST(req: NextRequest) {
         status: shouldEnd ? 'completed' : 'active',
       })
       .eq('id', session_id);
+
+    if (updateError) {
+      console.error('Session update error:', updateError);
+      throw new Error(`Failed to update session: ${updateError.message}`);
+    }
+
+    console.log('=== Interview Message API: Success ===');
+    console.log('Total latency:', Date.now() - startTime, 'ms');
 
     return NextResponse.json({
       success: true,
@@ -294,7 +336,11 @@ export async function POST(req: NextRequest) {
       total_latency_ms: Date.now() - startTime,
     });
   } catch (error) {
-    console.error('Interview Message Error:', error);
+    console.error('=== Interview Message API: ERROR ===');
+    console.error('Error type:', error instanceof Error ? error.constructor.name : typeof error);
+    console.error('Error message:', error instanceof Error ? error.message : String(error));
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    console.error('Total time before error:', Date.now() - startTime, 'ms');
 
     return NextResponse.json(
       {

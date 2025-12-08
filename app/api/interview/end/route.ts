@@ -30,6 +30,8 @@ const EVALUATION_SCHEMA = {
         hr_manager: { type: 'number' },
         senior_peer: { type: 'number' },
       },
+      required: ['hiring_manager', 'hr_manager', 'senior_peer'],
+      additionalProperties: false,
     },
     competency_scores: {
       type: 'object',
@@ -43,6 +45,8 @@ const EVALUATION_SCHEMA = {
         leadership: { type: 'number', description: '리더십 (0-100)' },
         adaptability: { type: 'number', description: '적응력 (0-100)' },
       },
+      required: ['behavioral', 'clarity', 'comprehension', 'communication', 'reasoning', 'problem_solving', 'leadership', 'adaptability'],
+      additionalProperties: false,
     },
     feedback_summary: { type: 'string', description: '전체 피드백 요약 (2-3문장)' },
     strengths: {
@@ -65,6 +69,7 @@ const EVALUATION_SCHEMA = {
     'strengths',
     'improvements',
   ],
+  additionalProperties: false,
 };
 
 export async function POST(req: NextRequest) {
