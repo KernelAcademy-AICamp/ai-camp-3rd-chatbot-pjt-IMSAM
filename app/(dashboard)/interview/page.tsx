@@ -48,7 +48,7 @@ export default function InterviewPage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isInterviewStarted, setIsInterviewStarted] = useState(false);
   const [turnCount, setTurnCount] = useState(0);
-  const [maxTurns] = useState(10);
+  const [maxTurns] = useState(3);
 
   // Audio state
   const [isRecording, setIsRecording] = useState(false);
@@ -63,9 +63,9 @@ export default function InterviewPage() {
   const [currentInterviewerId, setCurrentInterviewerId] = useState<InterviewerType>("hiring_manager");
   const [error, setError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
-  const [inputMode, setInputMode] = useState<"voice" | "text">("voice");
   const [textInput, setTextInput] = useState("");
   const [showInnerThoughts, setShowInnerThoughts] = useState(false);
+  const [showTextInput, setShowTextInput] = useState(false);
 
   // Timer state
   const [timerActive, setTimerActive] = useState(false);
@@ -231,7 +231,6 @@ export default function InterviewPage() {
 
       if (!sttData.success) {
         setError(sttData.error || "음성 변환 실패");
-        setInputMode("text"); // Switch to text mode on STT failure
         return;
       }
 
@@ -699,35 +698,8 @@ export default function InterviewPage() {
                 </div>
               )}
 
-              {/* Input Mode Toggle */}
-              <div className="flex justify-center mb-4">
-                <div className="inline-flex items-center gap-1 p-1 bg-secondary/50 rounded-lg">
-                  <button
-                    onClick={() => setInputMode("voice")}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-all ${
-                      inputMode === "voice"
-                        ? "bg-mint text-navy"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <Mic className="w-4 h-4" />
-                    음성
-                  </button>
-                  <button
-                    onClick={() => setInputMode("text")}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-all ${
-                      inputMode === "text"
-                        ? "bg-mint text-navy"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <Keyboard className="w-4 h-4" />
-                    텍스트
-                  </button>
-                </div>
-              </div>
-
-              {inputMode === "voice" ? (
+              <div className="space-y-4">
+                {/* Voice Input - Primary (Always visible) */}
                 <div className="flex flex-col items-center gap-4">
                   {/* Audio level visualization */}
                   {isRecording && (
@@ -749,7 +721,7 @@ export default function InterviewPage() {
                     variant={isRecording ? "destructive" : "mint"}
                     size="xl"
                     onClick={isRecording ? stopRecording : startRecording}
-                    disabled={isProcessing || isSpeaking}
+                    disabled={isProcessing}
                     className="w-48 gap-2"
                   >
                     {isRecording ? (
@@ -760,7 +732,7 @@ export default function InterviewPage() {
                     ) : (
                       <>
                         <Mic className="w-5 h-5" />
-                        답변하기
+                        음성으로 답변
                       </>
                     )}
                   </Button>
@@ -771,34 +743,55 @@ export default function InterviewPage() {
                       animate={{ opacity: 1 }}
                       className="text-sm text-mint"
                     >
-                      🔴 녹음 중... 말씀을 마치시면 버튼을 눌러주세요.
+                      🔴 녹음 중... 답변을 마친 후 버튼을 눌러주세요.
                     </motion.p>
                   )}
                 </div>
-              ) : (
-                <div className="flex gap-3">
-                  <input
-                    type="text"
-                    value={textInput}
-                    onChange={(e) => setTextInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleTextSubmit()}
-                    placeholder="답변을 입력하세요..."
-                    disabled={isProcessing}
-                    className="flex-1 px-4 py-3 rounded-xl bg-secondary/50 border border-border focus:border-mint focus:ring-1 focus:ring-mint outline-none transition-all"
-                  />
-                  <Button
-                    variant="mint"
-                    size="lg"
-                    onClick={handleTextSubmit}
-                    disabled={!textInput.trim() || isProcessing}
-                    className="gap-2"
-                  >
-                    <Send className="w-4 h-4" />
-                    전송
-                  </Button>
-                </div>
-              )}
 
+                {/* Text Input Toggle Button */}
+                <div className="flex justify-center">
+                  <button
+                    onClick={() => setShowTextInput(!showTextInput)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/50 hover:bg-secondary transition-all text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    <Keyboard className="w-4 h-4" />
+                    {showTextInput ? "텍스트 입력 숨기기" : "텍스트로 답변하기"}
+                  </button>
+                </div>
+
+                {/* Text Input - Secondary (Toggleable) */}
+                <AnimatePresence>
+                  {showTextInput && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="flex gap-3"
+                    >
+                      <input
+                        type="text"
+                        value={textInput}
+                        onChange={(e) => setTextInput(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleTextSubmit()}
+                        placeholder="텍스트로 답변 입력..."
+                        disabled={isProcessing}
+                        className="flex-1 px-4 py-3 rounded-xl bg-secondary/50 border border-border focus:border-mint focus:ring-1 focus:ring-mint outline-none transition-all placeholder:text-muted-foreground/50"
+                      />
+                      <Button
+                        variant="mint"
+                        size="lg"
+                        onClick={handleTextSubmit}
+                        disabled={!textInput.trim() || isProcessing}
+                        className="gap-2"
+                      >
+                        <Send className="w-4 h-4" />
+                        전송
+                      </Button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
               {/* Inner thoughts toggle */}
               <div className="flex justify-center mt-4">
                 <button

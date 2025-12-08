@@ -45,12 +45,14 @@ const INTERVIEW_RESPONSE_SCHEMA = {
         depth: { type: 'number', description: '답변 깊이 (0-100)' },
       },
       required: ['relevance', 'clarity', 'depth'],
+      additionalProperties: false,
     },
     inner_thought: { type: 'string', description: '면접관의 속마음 (1-2문장)' },
     follow_up_intent: { type: 'boolean', description: '꼬리질문 의도 여부' },
     suggested_follow_up: { type: 'string', description: '다음 꼬리질문 제안' },
   },
-  required: ['question', 'evaluation', 'follow_up_intent'],
+  required: ['question', 'evaluation', 'inner_thought', 'follow_up_intent', 'suggested_follow_up'],
+  additionalProperties: false,
 };
 
 export class LLMRouter {
@@ -107,58 +109,63 @@ export class LLMRouter {
   }
 
   private async callOpenAI(request: LLMRequest & { systemPrompt: string }): Promise<Omit<LLMResponse, 'latencyMs'>> {
-    const messages: OpenAI.ChatCompletionMessageParam[] = [
-      { role: 'system', content: request.systemPrompt },
-      ...request.messages.map(msg => ({
-        role: msg.role as 'user' | 'assistant',
-        content: msg.content,
-      })),
-    ];
+    try {
+      const messages: OpenAI.ChatCompletionMessageParam[] = [
+        { role: 'system', content: request.systemPrompt },
+        ...request.messages.map(msg => ({
+          role: msg.role as 'user' | 'assistant' | 'system',
+          content: msg.content,
+        })),
+      ];
 
-    if (request.structuredOutput) {
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-4o',
-        messages,
-        response_format: {
-          type: 'json_schema',
-          json_schema: {
-            name: 'interview_response',
-            strict: true,
-            schema: INTERVIEW_RESPONSE_SCHEMA,
+      if (request.structuredOutput) {
+        const completion = await openai.chat.completions.create({
+          model: 'gpt-4o',
+          messages,
+          response_format: {
+            type: 'json_schema',
+            json_schema: {
+              name: 'interview_response',
+              strict: true,
+              schema: INTERVIEW_RESPONSE_SCHEMA,
+            },
           },
-        },
-        max_tokens: request.maxTokens || 500,
-        temperature: request.temperature || 0.7,
-      });
+          max_tokens: request.maxTokens || 500,
+          temperature: request.temperature || 0.7,
+        });
 
-      const content = completion.choices[0]?.message?.content || '';
-      let structuredResponse: StructuredResponse | undefined;
+        const content = completion.choices[0]?.message?.content || '';
+        let structuredResponse: StructuredResponse | undefined;
 
-      try {
-        structuredResponse = JSON.parse(content);
-      } catch {
-        console.error('Failed to parse structured response');
+        try {
+          structuredResponse = JSON.parse(content);
+        } catch (parseError) {
+          console.error('Failed to parse structured response:', parseError);
+        }
+
+        return {
+          content: structuredResponse?.question || content,
+          structuredResponse,
+          provider: 'openai',
+          model: 'gpt-4o',
+        };
+      } else {
+        const completion = await openai.chat.completions.create({
+          model: 'gpt-4o',
+          messages,
+          max_tokens: request.maxTokens || 300,
+          temperature: request.temperature || 0.7,
+        });
+
+        return {
+          content: completion.choices[0]?.message?.content || '',
+          provider: 'openai',
+          model: 'gpt-4o',
+        };
       }
-
-      return {
-        content: structuredResponse?.question || content,
-        structuredResponse,
-        provider: 'openai',
-        model: 'gpt-4o',
-      };
-    } else {
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-4o',
-        messages,
-        max_tokens: request.maxTokens || 300,
-        temperature: request.temperature || 0.7,
-      });
-
-      return {
-        content: completion.choices[0]?.message?.content || '',
-        provider: 'openai',
-        model: 'gpt-4o',
-      };
+    } catch (error) {
+      console.error('OpenAI API Error:', error);
+      throw error;
     }
   }
 }
