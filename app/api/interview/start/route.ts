@@ -3,14 +3,21 @@
 // ============================================
 // POST /api/interview/start
 // - Creates new interview session
+// - Assigns random MBTI and names to each interviewer
 // - Returns first interviewer message
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { generateInterviewerResponse } from '@/lib/llm/router';
+import { generateInterviewerResponse, type UserKeyword, getRandomMBTI } from '@/lib/llm/router';
 import { ragService } from '@/lib/rag/service';
-import { INTERVIEWERS, type InterviewerType } from '@/types/interview';
+import {
+  INTERVIEWER_BASE,
+  type InterviewerType,
+  type MBTIType,
+  generateSessionInterviewerNames,
+  type SessionInterviewerNames,
+} from '@/types/interview';
 
 export async function POST(req: NextRequest) {
   console.log('=== Interview Start API Called ===');
@@ -24,6 +31,7 @@ export async function POST(req: NextRequest) {
       industry,
       difficulty = 'medium',
       resume_doc_id,
+      portfolio_doc_id,
       timer_config,
     } = body;
 
@@ -90,7 +98,46 @@ export async function POST(req: NextRequest) {
     console.log('User authenticated:', user.id, user.email);
     const userId = user.id;
 
-    // Create interview session
+    // Assign random MBTI to each interviewer for this session
+    const interviewerMbti: Record<InterviewerType, MBTIType> = {
+      hiring_manager: getRandomMBTI(),
+      hr_manager: getRandomMBTI(),
+      senior_peer: getRandomMBTI(),
+    };
+    console.log('Assigned interviewer MBTI:', interviewerMbti);
+
+    // Assign random names to each interviewer for this session
+    // Try to get from DB first, fallback to local names
+    let interviewerNames: SessionInterviewerNames;
+    try {
+      const { data: dbNames } = await supabase.rpc('get_random_interviewer_names');
+      if (dbNames && dbNames.length > 0) {
+        interviewerNames = {
+          hiring_manager: dbNames[0].hiring_manager_name,
+          hr_manager: dbNames[0].hr_manager_name,
+          senior_peer: dbNames[0].senior_peer_name,
+        };
+        console.log('Got interviewer names from DB:', interviewerNames);
+      } else {
+        interviewerNames = generateSessionInterviewerNames();
+        console.log('Using fallback interviewer names:', interviewerNames);
+      }
+    } catch (e) {
+      console.warn('Failed to get names from DB, using fallback:', e);
+      interviewerNames = generateSessionInterviewerNames();
+    }
+
+    // Create interview session with MBTI and name assignments
+    const sessionTimerConfig = {
+      ...(timer_config || {
+        default_time_limit: 120,
+        warning_threshold: 30,
+        auto_submit_on_timeout: true,
+      }),
+      interviewer_mbti: interviewerMbti, // Store MBTI assignments
+      interviewer_names: interviewerNames, // Store name assignments
+    };
+
     const { data: session, error: sessionError } = await supabase
       .from('interview_sessions')
       .insert({
@@ -99,14 +146,11 @@ export async function POST(req: NextRequest) {
         industry,
         difficulty,
         resume_doc_id,
+        portfolio_doc_id,
         status: 'active',
         turn_count: 0,
         max_turns: 10,
-        timer_config: timer_config || {
-          default_time_limit: 120,
-          warning_threshold: 30,
-          auto_submit_on_timeout: true,
-        },
+        timer_config: sessionTimerConfig,
         current_interviewer_id: 'hiring_manager',
       })
       .select()
@@ -123,8 +167,10 @@ export async function POST(req: NextRequest) {
 
     console.log('Session created:', session.id);
 
-    // Get resume context if available
+    // Get resume and portfolio context if available
     let resumeContext = '';
+    let portfolioContext = '';
+
     if (resume_doc_id) {
       try {
         console.log('Getting resume context for doc:', resume_doc_id);
@@ -138,18 +184,58 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Generate first message from hiring manager
+    if (portfolio_doc_id) {
+      try {
+        console.log('Getting portfolio context for doc:', portfolio_doc_id);
+        portfolioContext = await ragService.getContextForInterview(
+          userId,
+          '프로젝트 경험과 기술 스택',
+          portfolio_doc_id
+        );
+      } catch (e) {
+        console.warn('Failed to get portfolio context:', e);
+      }
+    }
+
+    // Get user's previous interview keywords for continuity
+    let userKeywords: UserKeyword[] = [];
+    try {
+      const { data: keywordsData } = await supabase
+        .from('user_keywords')
+        .select('keyword, category, context, mentioned_count')
+        .eq('user_id', userId)
+        .order('mentioned_count', { ascending: false })
+        .limit(20); // Top 20 most mentioned keywords
+
+      if (keywordsData && keywordsData.length > 0) {
+        userKeywords = keywordsData.map(kw => ({
+          keyword: kw.keyword,
+          category: kw.category as UserKeyword['category'],
+          context: kw.context || undefined,
+          mentioned_count: kw.mentioned_count,
+        }));
+        console.log('Loaded user keywords:', userKeywords.length);
+      }
+    } catch (e) {
+      console.warn('Failed to load user keywords:', e);
+    }
+
+    // Generate first message from hiring manager with assigned MBTI
     const firstInterviewer: InterviewerType = 'hiring_manager';
-    const interviewer = INTERVIEWERS[firstInterviewer];
+    const interviewerBase = INTERVIEWER_BASE[firstInterviewer];
+    const firstInterviewerMbti = interviewerMbti[firstInterviewer];
 
     console.log('Generating first interviewer message via OpenAI...');
+    console.log('First interviewer MBTI:', firstInterviewerMbti);
 
-    const systemPrompt = `${interviewer.system_prompt}
-
-면접 시작 시 인사를 하고 첫 질문을 합니다.
-${resumeContext ? `\n지원자 정보:\n${resumeContext}` : ''}
-
-현재 상황: 면접이 막 시작되었습니다. 친절하게 인사하고 간단한 자기소개를 요청하세요.`;
+    // Build context from uploaded documents
+    const documentContext = [];
+    if (resumeContext) {
+      documentContext.push(`[이력서/자소서]\n${resumeContext}`);
+    }
+    if (portfolioContext) {
+      documentContext.push(`[포트폴리오]\n${portfolioContext}`);
+    }
 
     let response;
     try {
@@ -157,7 +243,15 @@ ${resumeContext ? `\n지원자 정보:\n${resumeContext}` : ''}
         [{ role: 'user', content: '[면접 시작] 지원자가 입장했습니다.' }],
         firstInterviewer,
         job_type,
-        false
+        false,
+        documentContext.length > 0 ? documentContext.join('\n\n') : undefined,
+        {
+          userKeywords: userKeywords.length > 0 ? userKeywords : undefined,
+          industry: industry || 'IT/테크',
+          difficulty,
+          turnCount: 1,
+          interviewerMbti: firstInterviewerMbti,
+        }
       );
       console.log('LLM response received, latency:', response.latencyMs, 'ms');
     } catch (llmError) {
@@ -212,10 +306,13 @@ ${resumeContext ? `\n지원자 정보:\n${resumeContext}` : ''}
       },
       interviewer: {
         id: firstInterviewer,
-        name: interviewer.name,
-        role: interviewer.role,
-        emoji: interviewer.emoji,
+        name: interviewerNames[firstInterviewer], // Use randomly assigned name
+        role: interviewerBase.role,
+        emoji: interviewerBase.emoji,
+        personality: firstInterviewerMbti,
       },
+      // All interviewer names for client display
+      interviewer_names: interviewerNames,
     });
   } catch (error) {
     console.error('=== Interview Start Error ===');

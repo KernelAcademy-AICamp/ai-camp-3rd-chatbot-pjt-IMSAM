@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { INTERVIEWERS, type InterviewerType } from '@/types/interview';
+import { extractInterviewKeywords, type ChatMessage } from '@/lib/llm/router';
 import OpenAI from 'openai';
 
 const openai = new OpenAI({
@@ -29,6 +30,8 @@ const EVALUATION_SCHEMA = {
         hr_manager: { type: 'number' },
         senior_peer: { type: 'number' },
       },
+      required: ['hiring_manager', 'hr_manager', 'senior_peer'],
+      additionalProperties: false,
     },
     competency_scores: {
       type: 'object',
@@ -42,6 +45,8 @@ const EVALUATION_SCHEMA = {
         leadership: { type: 'number', description: '리더십 (0-100)' },
         adaptability: { type: 'number', description: '적응력 (0-100)' },
       },
+      required: ['behavioral', 'clarity', 'comprehension', 'communication', 'reasoning', 'problem_solving', 'leadership', 'adaptability'],
+      additionalProperties: false,
     },
     feedback_summary: { type: 'string', description: '전체 피드백 요약 (2-3문장)' },
     strengths: {
@@ -64,6 +69,7 @@ const EVALUATION_SCHEMA = {
     'strengths',
     'improvements',
   ],
+  additionalProperties: false,
 };
 
 export async function POST(req: NextRequest) {
@@ -243,6 +249,65 @@ ${transcript}
 
     if (resultError) {
       console.error('Result save error:', resultError);
+    }
+
+    // Extract keywords for future interviews
+    try {
+      console.log('Extracting interview keywords...');
+
+      // Build chat messages for keyword extraction
+      const chatMessages: ChatMessage[] = (messages as MessageRow[]).map(msg => ({
+        role: msg.role === 'user' ? 'user' : 'assistant',
+        content: msg.content,
+      }));
+
+      const keywordResult = await extractInterviewKeywords(chatMessages, session.job_type);
+
+      console.log('Extracted keywords:', keywordResult.keywords.length);
+
+      // Save keywords to database
+      for (const kw of keywordResult.keywords) {
+        try {
+          await supabase.rpc('upsert_user_keyword', {
+            p_user_id: session.user_id,
+            p_session_id: session_id,
+            p_keyword: kw.keyword,
+            p_category: kw.category,
+            p_context: kw.context || null,
+            p_mentioned_count: kw.mentioned_count,
+          });
+        } catch (kwError) {
+          // Fallback: direct insert if function doesn't exist
+          console.warn('RPC failed, using direct insert:', kwError);
+          await supabase.from('user_keywords').upsert(
+            {
+              user_id: session.user_id,
+              session_id,
+              keyword: kw.keyword,
+              category: kw.category,
+              context: kw.context || null,
+              mentioned_count: kw.mentioned_count,
+            },
+            { onConflict: 'user_id,keyword,category' }
+          );
+        }
+      }
+
+      // Save interview summary
+      if (keywordResult.summary) {
+        await supabase.from('user_interview_summaries').insert({
+          user_id: session.user_id,
+          session_id,
+          summary: keywordResult.summary,
+          job_type: session.job_type,
+          industry: (sessionData as { industry?: string }).industry || null,
+        });
+      }
+
+      console.log('Keywords saved successfully');
+    } catch (keywordError) {
+      // Don't fail the whole request if keyword extraction fails
+      console.error('Keyword extraction failed:', keywordError);
     }
 
     return NextResponse.json({

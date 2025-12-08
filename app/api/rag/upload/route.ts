@@ -7,11 +7,50 @@
 // - Stores in Supabase with pgvector
 
 import { NextRequest, NextResponse } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 import { uploadDocument } from '@/lib/rag/service';
 import type { DocumentType } from '@/types/interview';
 
 export async function POST(req: NextRequest) {
+  console.log('=== RAG Upload API Called ===');
+
   try {
+    // Check authentication
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              );
+            } catch {
+              // Server Component context
+            }
+          },
+        },
+      }
+    );
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      console.error('Auth error:', authError);
+      return NextResponse.json(
+        { success: false, error: '로그인이 필요합니다.' },
+        { status: 401 }
+      );
+    }
+
+    console.log('User authenticated:', user.id);
+
     const formData = await req.formData();
     const file = formData.get('file') as File;
     const type = (formData.get('type') as DocumentType) || 'resume';
@@ -23,6 +62,8 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    console.log('File received:', file.name, file.type, file.size);
 
     // Validate file type
     const validTypes = [
@@ -100,11 +141,14 @@ export async function POST(req: NextRequest) {
       type,
     };
 
-    // TODO: Get user ID from auth
-    const userId = 'anonymous';
+    const userId = user.id;
+
+    console.log('Uploading document for user:', userId);
 
     // Upload and embed document
     const document = await uploadDocument(userId, type, file.name, content, metadata);
+
+    console.log('Document uploaded:', document.id);
 
     return NextResponse.json({
       success: true,
@@ -130,9 +174,6 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Config for larger file uploads
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+// Route segment config for larger file uploads
+export const runtime = 'nodejs';
+export const maxDuration = 60;

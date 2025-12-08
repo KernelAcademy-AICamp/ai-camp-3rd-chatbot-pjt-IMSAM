@@ -4,34 +4,52 @@
 // POST /api/interview/message
 // - Receives user answer
 // - Generates interviewer response with LLM
+// - Enhanced interviewer transition logic
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { generateInterviewerResponse, type ChatMessage } from '@/lib/llm/router';
+import { generateInterviewerResponse, type ChatMessage, type UserKeyword } from '@/lib/llm/router';
 import { ragService } from '@/lib/rag/service';
-import { INTERVIEWERS, type InterviewerType } from '@/types/interview';
+import { INTERVIEWER_BASE, type InterviewerType, type MBTIType } from '@/types/interview';
 
-// Weighted interviewer selection
-function selectNextInterviewer(currentId: InterviewerType): InterviewerType {
-  const weights = {
+// Enhanced interviewer selection with follow-up probability
+// If same interviewer selected, high chance of follow-up question
+// If different interviewer, transform question or ask new one
+function selectNextInterviewer(
+  currentId: InterviewerType,
+  turnCount: number
+): { nextId: InterviewerType; isFollowUp: boolean } {
+  // Base weights for each interviewer
+  const baseWeights = {
     hiring_manager: 0.4,
     hr_manager: 0.2,
     senior_peer: 0.4,
   };
 
-  const others = (Object.keys(weights) as InterviewerType[]).filter(id => id !== currentId);
-  const totalWeight = others.reduce((sum, id) => sum + weights[id], 0);
+  // Follow-up probability: same interviewer continues (higher early in interview)
+  const followUpProbability = Math.max(0.3, 0.6 - (turnCount * 0.05)); // Starts at 55%, decreases
+
+  // Decide if same interviewer should continue for follow-up
+  if (Math.random() < followUpProbability) {
+    return { nextId: currentId, isFollowUp: true };
+  }
+
+  // Select different interviewer
+  const others = (Object.keys(baseWeights) as InterviewerType[]).filter(id => id !== currentId);
+  const totalWeight = others.reduce((sum, id) => sum + baseWeights[id], 0);
 
   const random = Math.random() * totalWeight;
   let cumulative = 0;
 
   for (const id of others) {
-    cumulative += weights[id];
-    if (random <= cumulative) return id;
+    cumulative += baseWeights[id];
+    if (random <= cumulative) {
+      return { nextId: id, isFollowUp: false };
+    }
   }
 
-  return others[0];
+  return { nextId: others[0], isFollowUp: false };
 }
 
 export async function POST(req: NextRequest) {
@@ -147,37 +165,96 @@ export async function POST(req: NextRequest) {
     // Add current user message explicitly
     conversationHistory.push({ role: 'user', content });
 
-    console.log('Conversation history loaded:', conversationHistory.length, 'messages');
-
-    // Select next interviewer
+    // Select next interviewer with enhanced follow-up logic
     const currentInterviewerId = session.current_interviewer_id as InterviewerType || 'hiring_manager';
-    const nextInterviewerId = selectNextInterviewer(currentInterviewerId);
-    const interviewer = INTERVIEWERS[nextInterviewerId];
-    console.log('Interviewer selected:', { current: currentInterviewerId, next: nextInterviewerId });
+    const { nextId: nextInterviewerId, isFollowUp } = selectNextInterviewer(
+      currentInterviewerId,
+      session.turn_count
+    );
+    const interviewerBase = INTERVIEWER_BASE[nextInterviewerId];
 
-    // Get relevant context from RAG
-    let context = '';
+    // Get interviewer MBTI and name from session metadata
+    interface SessionMetadata {
+      interviewer_mbti?: Record<InterviewerType, MBTIType>;
+      interviewer_names?: Record<InterviewerType, string>;
+    }
+    const sessionMetadata = (session.timer_config as unknown as SessionMetadata) || {};
+    const interviewerMbti = sessionMetadata.interviewer_mbti?.[nextInterviewerId] as MBTIType | undefined;
+    const interviewerName = sessionMetadata.interviewer_names?.[nextInterviewerId] || interviewerBase.name;
+
+    // Get relevant context from RAG (both resume and portfolio)
+    const contextParts: string[] = [];
+
     if (session.resume_doc_id) {
       console.log('Fetching RAG context for resume:', session.resume_doc_id);
       try {
-        context = await ragService.getContextForInterview(
+        const resumeContext = await ragService.getContextForInterview(
           session.user_id,
           content,
           session.resume_doc_id
         );
-        console.log('RAG context retrieved:', context.length, 'chars');
+        if (resumeContext) {
+          contextParts.push(`[이력서/자소서]\n${resumeContext}`);
+        }
       } catch (e) {
-        console.warn('Failed to get RAG context:', e);
+        console.warn('Failed to get resume RAG context:', e);
       }
     }
 
-    // Generate interviewer response
-    console.log('Generating LLM response...');
+    if (session.portfolio_doc_id) {
+      try {
+        const portfolioContext = await ragService.getContextForInterview(
+          session.user_id,
+          content,
+          session.portfolio_doc_id
+        );
+        if (portfolioContext) {
+          contextParts.push(`[포트폴리오]\n${portfolioContext}`);
+        }
+      } catch (e) {
+        console.warn('Failed to get portfolio RAG context:', e);
+      }
+    }
+
+    const context = contextParts.join('\n\n');
+
+    // Get user's previous interview keywords for continuity
+    let userKeywords: UserKeyword[] = [];
+    try {
+      const { data: keywordsData } = await supabase
+        .from('user_keywords')
+        .select('keyword, category, context, mentioned_count')
+        .eq('user_id', session.user_id)
+        .order('mentioned_count', { ascending: false })
+        .limit(20);
+
+      if (keywordsData && keywordsData.length > 0) {
+        userKeywords = keywordsData.map(kw => ({
+          keyword: kw.keyword,
+          category: kw.category as UserKeyword['category'],
+          context: kw.context || undefined,
+          mentioned_count: kw.mentioned_count,
+        }));
+      }
+    } catch (e) {
+      console.warn('Failed to load user keywords:', e);
+    }
+
+    // Generate interviewer response with RAG context, keywords, and follow-up logic
     const llmResponse = await generateInterviewerResponse(
       conversationHistory,
       nextInterviewerId,
       session.job_type,
-      true // Use structured output
+      true, // Use structured output
+      context || undefined, // Pass RAG context from resume and portfolio
+      {
+        userKeywords: userKeywords.length > 0 ? userKeywords : undefined,
+        industry: session.industry || undefined,
+        difficulty: session.difficulty as 'easy' | 'medium' | 'hard',
+        turnCount: session.turn_count + 1,
+        previousInterviewerId: isFollowUp ? undefined : currentInterviewerId, // Pass previous for transition
+        interviewerMbti,
+      }
     );
     console.log('LLM response generated:', {
       contentLength: llmResponse.content.length,
@@ -249,9 +326,9 @@ export async function POST(req: NextRequest) {
       },
       interviewer: {
         id: nextInterviewerId,
-        name: interviewer.name,
-        role: interviewer.role,
-        emoji: interviewer.emoji,
+        name: interviewerName, // Use session-assigned name
+        role: interviewerBase.role,
+        emoji: interviewerBase.emoji,
       },
       session_status: shouldEnd ? 'completed' : 'active',
       turn_count: newTurnCount,

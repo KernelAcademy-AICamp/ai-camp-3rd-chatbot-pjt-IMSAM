@@ -115,6 +115,7 @@ CREATE TABLE interview_sessions (
   industry TEXT,
   difficulty difficulty_level NOT NULL DEFAULT 'medium',
   resume_doc_id UUID REFERENCES documents(id) ON DELETE SET NULL,
+  portfolio_doc_id UUID REFERENCES documents(id) ON DELETE SET NULL,
   company_doc_ids UUID[] DEFAULT '{}',
   status session_status NOT NULL DEFAULT 'waiting',
   turn_count INT NOT NULL DEFAULT 0,

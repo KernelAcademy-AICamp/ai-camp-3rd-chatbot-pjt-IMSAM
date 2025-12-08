@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -15,58 +15,115 @@ import {
   Check,
   X,
   Loader2,
+  FolderOpen,
+  AlertCircle,
 } from "lucide-react";
 import { JOB_TYPES, INDUSTRIES, DIFFICULTY_LEVELS } from "@/types/interview";
+import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+
+interface UploadedFile {
+  file: File;
+  docId: string | null;
+  status: "uploading" | "success" | "error";
+  error?: string;
+}
 
 interface SetupState {
   jobType: string;
   industry: string;
   difficulty: "easy" | "medium" | "hard";
-  resumeFile: File | null;
-  resumeDocId: string | null;
+  resume: UploadedFile | null;
+  portfolio: UploadedFile | null;
 }
 
 export default function InterviewSetupPage() {
   const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const resumeInputRef = useRef<HTMLInputElement>(null);
+  const portfolioInputRef = useRef<HTMLInputElement>(null);
+  const supabase = createBrowserSupabaseClient();
+
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [userProfile, setUserProfile] = useState<{ job_type?: string; industry?: string } | null>(null);
 
   const [setup, setSetup] = useState<SetupState>({
     jobType: "",
     industry: "",
     difficulty: "medium",
-    resumeFile: null,
-    resumeDocId: null,
+    resume: null,
+    portfolio: null,
   });
-  const [isUploading, setIsUploading] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState("");
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Check auth and load profile
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
 
+      if (!user) {
+        router.push("/login?redirect=/interview/setup");
+        return;
+      }
+
+      // Load user profile
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("job_type, industry")
+        .eq("id", user.id)
+        .single();
+
+      const profileData = profile as { job_type?: string; industry?: string } | null;
+
+      if (profileData) {
+        setUserProfile(profileData);
+        // Pre-fill from profile
+        setSetup(prev => ({
+          ...prev,
+          jobType: profileData.job_type || "",
+          industry: profileData.industry || "",
+        }));
+      }
+
+      setIsCheckingAuth(false);
+    };
+
+    checkAuth();
+  }, [router, supabase]);
+
+  const handleFileUpload = async (
+    file: File,
+    type: "resume" | "portfolio"
+  ) => {
     // Validate file type
-    const validTypes = ["application/pdf", "text/plain", "application/msword"];
+    const validTypes = [
+      "application/pdf",
+      "text/plain",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
     if (!validTypes.includes(file.type)) {
-      setError("PDF, TXT, DOC 파일만 업로드 가능합니다.");
+      setError("PDF, TXT, DOC, DOCX 파일만 업로드 가능합니다.");
       return;
     }
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setError("파일 크기는 5MB 이하여야 합니다.");
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setError("파일 크기는 10MB 이하여야 합니다.");
       return;
     }
 
-    setSetup((prev) => ({ ...prev, resumeFile: file }));
     setError("");
 
-    // Upload file
-    setIsUploading(true);
+    // Set uploading state
+    setSetup((prev) => ({
+      ...prev,
+      [type]: { file, docId: null, status: "uploading" },
+    }));
+
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("type", "resume");
+      formData.append("type", type);
 
       const response = await fetch("/api/rag/upload", {
         method: "POST",
@@ -74,23 +131,51 @@ export default function InterviewSetupPage() {
       });
 
       const data = await response.json();
+
       if (data.success) {
-        setSetup((prev) => ({ ...prev, resumeDocId: data.document.id }));
+        setSetup((prev) => ({
+          ...prev,
+          [type]: { file, docId: data.document.id, status: "success" },
+        }));
       } else {
+        setSetup((prev) => ({
+          ...prev,
+          [type]: { file, docId: null, status: "error", error: data.error },
+        }));
         setError(data.error || "파일 업로드 실패");
-        setSetup((prev) => ({ ...prev, resumeFile: null }));
       }
     } catch (err) {
+      setSetup((prev) => ({
+        ...prev,
+        [type]: { file, docId: null, status: "error", error: "업로드 오류" },
+      }));
       setError("파일 업로드 중 오류가 발생했습니다.");
-      setSetup((prev) => ({ ...prev, resumeFile: null }));
-    } finally {
-      setIsUploading(false);
     }
+  };
+
+  const handleResumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleFileUpload(file, "resume");
+  };
+
+  const handlePortfolioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleFileUpload(file, "portfolio");
+  };
+
+  const removeFile = (type: "resume" | "portfolio") => {
+    setSetup((prev) => ({ ...prev, [type]: null }));
   };
 
   const handleStart = async () => {
     if (!setup.jobType) {
       setError("직무를 선택해주세요.");
+      return;
+    }
+
+    // Check if any file is still uploading
+    if (setup.resume?.status === "uploading" || setup.portfolio?.status === "uploading") {
+      setError("파일 업로드가 완료될 때까지 기다려주세요.");
       return;
     }
 
@@ -105,7 +190,8 @@ export default function InterviewSetupPage() {
           job_type: setup.jobType,
           industry: setup.industry,
           difficulty: setup.difficulty,
-          resume_doc_id: setup.resumeDocId,
+          resume_doc_id: setup.resume?.docId || null,
+          portfolio_doc_id: setup.portfolio?.docId || null,
         }),
       });
 
@@ -126,6 +212,16 @@ export default function InterviewSetupPage() {
   };
 
   const isReady = setup.jobType !== "";
+  const isUploading = setup.resume?.status === "uploading" || setup.portfolio?.status === "uploading";
+
+  // Loading state
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-mint" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background py-12 px-4">
@@ -289,39 +385,33 @@ export default function InterviewSetupPage() {
               </div>
 
               <input
-                ref={fileInputRef}
+                ref={resumeInputRef}
                 type="file"
                 accept=".pdf,.txt,.doc,.docx"
-                onChange={handleFileChange}
+                onChange={handleResumeChange}
                 className="hidden"
               />
 
-              {setup.resumeFile ? (
+              {setup.resume ? (
                 <div className="flex items-center gap-3 p-4 rounded-xl bg-secondary/50">
-                  <FileText className="w-8 h-8 text-mint" />
+                  <FileText className="w-8 h-8 text-violet-500" />
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-foreground truncate">
-                      {setup.resumeFile.name}
+                      {setup.resume.file.name}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {(setup.resumeFile.size / 1024).toFixed(1)} KB
+                      {(setup.resume.file.size / 1024).toFixed(1)} KB
                     </p>
                   </div>
-                  {isUploading ? (
+                  {setup.resume.status === "uploading" ? (
                     <Loader2 className="w-5 h-5 text-mint animate-spin" />
-                  ) : setup.resumeDocId ? (
+                  ) : setup.resume.status === "success" ? (
                     <Check className="w-5 h-5 text-green-500" />
                   ) : (
-                    <X className="w-5 h-5 text-destructive" />
+                    <AlertCircle className="w-5 h-5 text-destructive" />
                   )}
                   <button
-                    onClick={() =>
-                      setSetup((prev) => ({
-                        ...prev,
-                        resumeFile: null,
-                        resumeDocId: null,
-                      }))
-                    }
+                    onClick={() => removeFile("resume")}
                     className="p-1 hover:bg-secondary rounded"
                   >
                     <X className="w-4 h-4 text-muted-foreground" />
@@ -329,17 +419,92 @@ export default function InterviewSetupPage() {
                 </div>
               ) : (
                 <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full p-8 border-2 border-dashed border-border rounded-xl hover:border-mint/50 transition-colors"
+                  onClick={() => resumeInputRef.current?.click()}
+                  className="w-full p-8 border-2 border-dashed border-border rounded-xl hover:border-violet-500/50 transition-colors"
                 >
                   <div className="flex flex-col items-center gap-3">
                     <Upload className="w-10 h-10 text-muted-foreground" />
                     <div className="text-center">
                       <p className="font-medium text-foreground">
-                        파일을 드래그하거나 클릭하여 업로드
+                        이력서 또는 자기소개서 업로드
                       </p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        PDF, TXT, DOC (최대 5MB)
+                        PDF, TXT, DOC, DOCX (최대 10MB)
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              )}
+            </Card>
+          </motion.div>
+
+          {/* Portfolio Upload */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+          >
+            <Card className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                  <FolderOpen className="w-5 h-5 text-emerald-500" />
+                </div>
+                <div>
+                  <h2 className="font-medium text-foreground">
+                    포트폴리오 업로드
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    선택사항 - 프로젝트 경험 기반 질문에 활용됩니다
+                  </p>
+                </div>
+              </div>
+
+              <input
+                ref={portfolioInputRef}
+                type="file"
+                accept=".pdf,.txt,.doc,.docx"
+                onChange={handlePortfolioChange}
+                className="hidden"
+              />
+
+              {setup.portfolio ? (
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-secondary/50">
+                  <FolderOpen className="w-8 h-8 text-emerald-500" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-foreground truncate">
+                      {setup.portfolio.file.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {(setup.portfolio.file.size / 1024).toFixed(1)} KB
+                    </p>
+                  </div>
+                  {setup.portfolio.status === "uploading" ? (
+                    <Loader2 className="w-5 h-5 text-mint animate-spin" />
+                  ) : setup.portfolio.status === "success" ? (
+                    <Check className="w-5 h-5 text-green-500" />
+                  ) : (
+                    <AlertCircle className="w-5 h-5 text-destructive" />
+                  )}
+                  <button
+                    onClick={() => removeFile("portfolio")}
+                    className="p-1 hover:bg-secondary rounded"
+                  >
+                    <X className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => portfolioInputRef.current?.click()}
+                  className="w-full p-8 border-2 border-dashed border-border rounded-xl hover:border-emerald-500/50 transition-colors"
+                >
+                  <div className="flex flex-col items-center gap-3">
+                    <Upload className="w-10 h-10 text-muted-foreground" />
+                    <div className="text-center">
+                      <p className="font-medium text-foreground">
+                        포트폴리오 또는 프로젝트 소개 업로드
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        PDF, TXT, DOC, DOCX (최대 10MB)
                       </p>
                     </div>
                   </div>
@@ -363,7 +528,7 @@ export default function InterviewSetupPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
+            transition={{ delay: 0.6 }}
           >
             <Button
               variant="mint"

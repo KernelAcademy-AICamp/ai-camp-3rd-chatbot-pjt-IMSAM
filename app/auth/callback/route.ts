@@ -5,7 +5,6 @@ import { cookies } from 'next/headers';
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
-  const next = searchParams.get('next') ?? '/dashboard';
 
   if (code) {
     const cookieStore = await cookies();
@@ -30,10 +29,22 @@ export async function GET(request: Request) {
       }
     );
 
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
-    if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+    if (!error && data.user) {
+      // Check if user has completed onboarding (has job_type)
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('job_type')
+        .eq('id', data.user.id)
+        .single();
+
+      // Redirect to onboarding if profile is incomplete
+      if (!profile?.job_type) {
+        return NextResponse.redirect(`${origin}/onboarding`);
+      }
+
+      return NextResponse.redirect(`${origin}/dashboard`);
     }
   }
 

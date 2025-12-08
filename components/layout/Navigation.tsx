@@ -3,8 +3,17 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Menu, X } from "lucide-react";
+import { Menu, X, LogOut, User } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const navItems = [
   { label: "Product", href: "#product" },
@@ -15,8 +24,13 @@ const navItems = [
 ];
 
 export function Navigation() {
+  const router = useRouter();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState<{ email: string; name?: string } | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const supabase = createBrowserSupabaseClient();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -25,6 +39,57 @@ export function Navigation() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUser({
+          email: user.email || "",
+          name: user.user_metadata?.full_name || user.email?.split("@")[0],
+        });
+      } else {
+        setUser(null);
+      }
+    };
+
+    checkUser();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        setUser({
+          email: session.user.email || "",
+          name: session.user.user_metadata?.full_name || session.user.email?.split("@")[0],
+        });
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [supabase]);
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      // Call logout API
+      await fetch("/api/auth/logout", { method: "POST" });
+
+      // Also sign out on client side
+      await supabase.auth.signOut();
+
+      // Clear user state
+      setUser(null);
+
+      // Redirect to home
+      router.push("/");
+      router.refresh();
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   return (
     <>
@@ -71,16 +136,57 @@ export function Navigation() {
 
           {/* CTA Buttons */}
           <div className="hidden lg:flex items-center gap-3">
-            <Link href="/login">
-              <Button variant="ghost" size="sm">
-                로그인
-              </Button>
-            </Link>
-            <Link href="/interview">
-              <Button variant="mint" size="sm">
-                Try Demo
-              </Button>
-            </Link>
+            {user ? (
+              <>
+                <Link href="/dashboard">
+                  <Button variant="ghost" size="sm">
+                    대시보드
+                  </Button>
+                </Link>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <User className="w-4 h-4" />
+                      {user.name}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard" className="cursor-pointer">
+                        대시보드
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/onboarding" className="cursor-pointer">
+                        프로필 설정
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={handleLogout}
+                      disabled={isLoggingOut}
+                      className="text-red-500 cursor-pointer"
+                    >
+                      <LogOut className="w-4 h-4 mr-2" />
+                      {isLoggingOut ? "로그아웃 중..." : "로그아웃"}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            ) : (
+              <>
+                <Link href="/login">
+                  <Button variant="ghost" size="sm">
+                    로그인
+                  </Button>
+                </Link>
+                <Link href="/signup">
+                  <Button variant="mint" size="sm">
+                    시작하기
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -120,11 +226,40 @@ export function Navigation() {
                   </a>
                 ))}
                 <div className="border-t border-border my-2" />
-                <Link href="/interview">
-                  <Button variant="mint" className="w-full">
-                    Try Demo
-                  </Button>
-                </Link>
+                {user ? (
+                  <>
+                    <Link href="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Button variant="outline" className="w-full mb-2">
+                        대시보드
+                      </Button>
+                    </Link>
+                    <Button
+                      variant="destructive"
+                      className="w-full"
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        handleLogout();
+                      }}
+                      disabled={isLoggingOut}
+                    >
+                      <LogOut className="w-4 h-4 mr-2" />
+                      {isLoggingOut ? "로그아웃 중..." : "로그아웃"}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Button variant="outline" className="w-full mb-2">
+                        로그인
+                      </Button>
+                    </Link>
+                    <Link href="/signup" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Button variant="mint" className="w-full">
+                        시작하기
+                      </Button>
+                    </Link>
+                  </>
+                )}
               </nav>
             </div>
           </motion.div>
