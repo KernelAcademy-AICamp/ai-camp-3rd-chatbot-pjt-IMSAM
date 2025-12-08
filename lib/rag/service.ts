@@ -47,7 +47,8 @@ class RAGService {
     content: string,
     metadata: Record<string, unknown> = {}
   ): Promise<Document> {
-    const supabase = createServerClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServerClient() as any;
 
     // Generate embedding
     const embedding = await this.generateEmbedding(content);
@@ -94,7 +95,8 @@ class RAGService {
       topK = 5,
     } = config;
 
-    const supabase = createServerClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServerClient() as any;
 
     // Generate query embedding
     const queryEmbedding = await this.generateEmbedding(query);
@@ -150,7 +152,8 @@ class RAGService {
     docTypes?: DocumentType[],
     topK: number = 5
   ): Promise<RAGSearchResult[]> {
-    const supabase = createServerClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServerClient() as any;
 
     const { data, error } = await supabase.rpc('match_documents', {
       query_embedding: queryEmbedding,
@@ -254,7 +257,8 @@ class RAGService {
 
   // Delete document
   async deleteDocument(documentId: string, userId: string): Promise<boolean> {
-    const supabase = createServerClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServerClient() as any;
 
     const { error } = await supabase
       .from('documents')
@@ -267,7 +271,8 @@ class RAGService {
 
   // Get user's documents
   async getUserDocuments(userId: string, type?: DocumentType): Promise<Document[]> {
-    const supabase = createServerClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServerClient() as any;
 
     let query = supabase
       .from('documents')
