@@ -51,6 +51,10 @@ export default function SignupPage() {
       setIsLoading(false);
       return;
     }
+    console.log("name", name);
+    console.log("email", email);
+    console.log("password", password);
+    console.log("confirmPassword", confirmPassword);  
 
     try {
       const { error } = await supabase.auth.signUp({
@@ -63,7 +67,7 @@ export default function SignupPage() {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
-
+      console.log("error", error);
       if (error) {
         if (error.message.includes("already registered")) {
           setError("이미 가입된 이메일입니다.");
@@ -75,6 +79,7 @@ export default function SignupPage() {
 
       setSuccess(true);
     } catch (err) {
+      console.log("err", err);
       setError("회원가입 중 오류가 발생했습니다.");
     } finally {
       setIsLoading(false);
