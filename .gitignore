@@ -104,3 +104,4 @@ test-report.xml
 
 # Transcriptions (keep directory structure but exclude content)
 /transcriptions/*.txt
+.env*.local
