@@ -25,7 +25,8 @@ export async function POST(req: NextRequest) {
     // TODO: Get user from auth
     const userId = 'anonymous'; // Replace with actual auth
 
-    const supabase = createServerClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServerClient() as any;
 
     // Create interview session
     const { data: session, error: sessionError } = await supabase

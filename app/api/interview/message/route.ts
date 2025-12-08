@@ -47,7 +47,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const supabase = createServerClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServerClient() as any;
 
     // Get session
     const { data: session, error: sessionError } = await supabase
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (session.status !== 'active') {
+    if ((session as { status: string }).status !== 'active') {
       return NextResponse.json(
         { success: false, error: '면접이 진행 중이 아닙니다.' },
         { status: 400 }
