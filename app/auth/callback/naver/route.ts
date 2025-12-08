@@ -133,8 +133,8 @@ export async function GET(request: Request) {
       }
     }
 
-    // Fallback: redirect to dashboard
-    return NextResponse.redirect(`${origin}/dashboard`);
+    // Fallback: redirect to onboarding for new users
+    return NextResponse.redirect(`${origin}/onboarding`);
   } catch (error) {
     console.error('Naver OAuth error:', error);
     return NextResponse.redirect(`${origin}/login?error=naver_oauth_error`);

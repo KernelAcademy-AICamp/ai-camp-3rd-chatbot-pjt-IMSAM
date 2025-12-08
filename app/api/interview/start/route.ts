@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
       industry,
       difficulty = 'medium',
       resume_doc_id,
+      portfolio_doc_id,
       timer_config,
     } = body;
 
@@ -99,6 +100,7 @@ export async function POST(req: NextRequest) {
         industry,
         difficulty,
         resume_doc_id,
+        portfolio_doc_id,
         status: 'active',
         turn_count: 0,
         max_turns: 10,
@@ -123,8 +125,10 @@ export async function POST(req: NextRequest) {
 
     console.log('Session created:', session.id);
 
-    // Get resume context if available
+    // Get resume and portfolio context if available
     let resumeContext = '';
+    let portfolioContext = '';
+
     if (resume_doc_id) {
       try {
         console.log('Getting resume context for doc:', resume_doc_id);
@@ -138,16 +142,38 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    if (portfolio_doc_id) {
+      try {
+        console.log('Getting portfolio context for doc:', portfolio_doc_id);
+        portfolioContext = await ragService.getContextForInterview(
+          userId,
+          '프로젝트 경험과 기술 스택',
+          portfolio_doc_id
+        );
+      } catch (e) {
+        console.warn('Failed to get portfolio context:', e);
+      }
+    }
+
     // Generate first message from hiring manager
     const firstInterviewer: InterviewerType = 'hiring_manager';
     const interviewer = INTERVIEWERS[firstInterviewer];
 
     console.log('Generating first interviewer message via OpenAI...');
 
+    // Build context from uploaded documents
+    const documentContext = [];
+    if (resumeContext) {
+      documentContext.push(`[이력서/자소서]\n${resumeContext}`);
+    }
+    if (portfolioContext) {
+      documentContext.push(`[포트폴리오]\n${portfolioContext}`);
+    }
+
     const systemPrompt = `${interviewer.system_prompt}
 
 면접 시작 시 인사를 하고 첫 질문을 합니다.
-${resumeContext ? `\n지원자 정보:\n${resumeContext}` : ''}
+${documentContext.length > 0 ? `\n지원자 정보:\n${documentContext.join('\n\n')}` : ''}
 
 현재 상황: 면접이 막 시작되었습니다. 친절하게 인사하고 간단한 자기소개를 요청하세요.`;
 

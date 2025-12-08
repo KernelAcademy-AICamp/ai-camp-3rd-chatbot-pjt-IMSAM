@@ -14,6 +14,7 @@ export interface LLMRequest {
   interviewerId: InterviewerType;
   position: string;
   systemPrompt?: string;
+  context?: string; // RAG context from documents
   structuredOutput?: boolean;
   maxTokens?: number;
   temperature?: number;
@@ -64,7 +65,7 @@ export class LLMRouter {
     console.log('API Key exists:', !!process.env.OPENAI_API_KEY);
     console.log('API Key prefix:', process.env.OPENAI_API_KEY?.substring(0, 10) + '...');
 
-    const systemPrompt = request.systemPrompt || this.buildSystemPrompt(interviewer, request.position);
+    const systemPrompt = request.systemPrompt || this.buildSystemPrompt(interviewer, request.position, request.context);
 
     try {
       const response = await this.callOpenAI({
@@ -90,12 +91,21 @@ export class LLMRouter {
     }
   }
 
-  private buildSystemPrompt(interviewer: typeof INTERVIEWERS[InterviewerType], position: string): string {
-    return `${interviewer.system_prompt}
+  private buildSystemPrompt(interviewer: typeof INTERVIEWERS[InterviewerType], position: string, context?: string): string {
+    let prompt = `${interviewer.system_prompt}
 
 현재 면접 상황:
 - 지원 포지션: ${position}
-- 면접관: ${interviewer.name} (${interviewer.role})
+- 면접관: ${interviewer.name} (${interviewer.role})`;
+
+    if (context) {
+      prompt += `
+
+지원자 문서 정보:
+${context}`;
+    }
+
+    prompt += `
 
 중요 지침:
 1. 지원자의 답변을 경청하고 적절한 꼬리질문을 합니다
@@ -103,7 +113,10 @@ export class LLMRouter {
 3. 답변이 좋으면 다른 관점에서 추가 질문을 합니다
 4. 한국어로 자연스럽게 대화합니다
 5. 질문은 1-2문장으로 간결하게 합니다
-6. ${interviewer.name}의 성격(${interviewer.personality})에 맞게 대화합니다`;
+6. ${interviewer.name}의 성격(${interviewer.personality})에 맞게 대화합니다
+${context ? '7. 지원자 문서 정보를 참고하여 구체적인 경험이나 프로젝트에 대해 질문합니다' : ''}`;
+
+    return prompt;
   }
 
   private async callOpenAI(request: LLMRequest & { systemPrompt: string }): Promise<Omit<LLMResponse, 'latencyMs'>> {
@@ -171,12 +184,14 @@ export async function generateInterviewerResponse(
   messages: ChatMessage[],
   interviewerId: InterviewerType,
   position: string,
-  structuredOutput: boolean = false
+  structuredOutput: boolean = false,
+  context?: string
 ): Promise<LLMResponse> {
   return llmRouter.generateResponse({
     messages,
     interviewerId,
     position,
     structuredOutput,
+    context,
   });
 }

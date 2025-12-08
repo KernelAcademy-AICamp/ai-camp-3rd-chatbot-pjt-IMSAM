@@ -128,26 +128,48 @@ export async function POST(req: NextRequest) {
     const nextInterviewerId = selectNextInterviewer(currentInterviewerId);
     const interviewer = INTERVIEWERS[nextInterviewerId];
 
-    // Get relevant context from RAG
-    let context = '';
+    // Get relevant context from RAG (both resume and portfolio)
+    const contextParts: string[] = [];
+
     if (session.resume_doc_id) {
       try {
-        context = await ragService.getContextForInterview(
+        const resumeContext = await ragService.getContextForInterview(
           session.user_id,
           content,
           session.resume_doc_id
         );
+        if (resumeContext) {
+          contextParts.push(`[이력서/자소서]\n${resumeContext}`);
+        }
       } catch (e) {
-        console.warn('Failed to get RAG context:', e);
+        console.warn('Failed to get resume RAG context:', e);
       }
     }
 
-    // Generate interviewer response
+    if (session.portfolio_doc_id) {
+      try {
+        const portfolioContext = await ragService.getContextForInterview(
+          session.user_id,
+          content,
+          session.portfolio_doc_id
+        );
+        if (portfolioContext) {
+          contextParts.push(`[포트폴리오]\n${portfolioContext}`);
+        }
+      } catch (e) {
+        console.warn('Failed to get portfolio RAG context:', e);
+      }
+    }
+
+    const context = contextParts.join('\n\n');
+
+    // Generate interviewer response with RAG context
     const llmResponse = await generateInterviewerResponse(
       conversationHistory,
       nextInterviewerId,
       session.job_type,
-      true // Use structured output
+      true, // Use structured output
+      context || undefined // Pass RAG context from resume and portfolio
     );
 
     // Save interviewer message
