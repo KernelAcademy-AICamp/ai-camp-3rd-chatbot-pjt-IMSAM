@@ -1,9 +1,16 @@
 // ============================================
-// LLM Router - OpenAI GPT-4o
+// LLM Router - OpenAI GPT-4o with Dynamic Prompts
 // ============================================
 
 import OpenAI from 'openai';
-import { INTERVIEWERS, type InterviewerType, type StructuredResponse } from '@/types/interview';
+import {
+  INTERVIEWER_BASE,
+  buildInterviewerSystemPrompt,
+  getRandomMBTI,
+  type InterviewerType,
+  type StructuredResponse,
+  type MBTIType,
+} from '@/types/interview';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -22,6 +29,9 @@ export interface LLMRequest {
   structuredOutput?: boolean;
   maxTokens?: number;
   temperature?: number;
+  // New fields for enhanced logic
+  previousInterviewerId?: InterviewerType; // For follow-up logic
+  interviewerMbti?: MBTIType; // Pre-assigned MBTI for the session
 }
 
 // User keyword from previous interviews
@@ -69,27 +79,45 @@ const INTERVIEW_RESPONSE_SCHEMA = {
 export class LLMRouter {
   async generateResponse(request: LLMRequest): Promise<LLMResponse> {
     const startTime = Date.now();
-    const interviewer = INTERVIEWERS[request.interviewerId];
+    const interviewerBase = INTERVIEWER_BASE[request.interviewerId];
 
     console.log('=== LLM Router: generateResponse ===');
     console.log('Interviewer:', request.interviewerId);
     console.log('Position:', request.position);
-    console.log('API Key exists:', !!process.env.OPENAI_API_KEY);
-    console.log('API Key prefix:', process.env.OPENAI_API_KEY?.substring(0, 10) + '...');
+    console.log('Industry:', request.industry);
+    console.log('MBTI:', request.interviewerMbti);
+    console.log('Previous Interviewer:', request.previousInterviewerId);
 
-    const systemPrompt = request.systemPrompt || this.buildSystemPrompt(
-      interviewer,
-      request.position,
+    // Use provided MBTI or generate random one
+    const mbti = request.interviewerMbti || getRandomMBTI();
+    const industry = request.industry || 'IT/테크';
+
+    // Build dynamic system prompt based on industry, job type, and MBTI
+    const basePrompt = request.systemPrompt || buildInterviewerSystemPrompt(
+      request.interviewerId,
+      mbti,
+      industry,
+      request.position
+    );
+
+    // Add context and instructions
+    const systemPrompt = this.enhanceSystemPrompt(
+      basePrompt,
       request.context,
       request.userKeywords,
-      request.industry,
       request.difficulty,
-      request.turnCount
+      request.turnCount,
+      request.previousInterviewerId,
+      request.interviewerId
     );
+
+    // Limit conversation history to last 3 turns (6 messages: 3 user + 3 assistant)
+    const limitedMessages = this.limitConversationHistory(request.messages, 3);
 
     try {
       const response = await this.callOpenAI({
         ...request,
+        messages: limitedMessages,
         systemPrompt,
       });
       console.log('OpenAI call succeeded');
@@ -111,24 +139,41 @@ export class LLMRouter {
     }
   }
 
-  private buildSystemPrompt(
-    interviewer: typeof INTERVIEWERS[InterviewerType],
-    position: string,
+  // Limit conversation to last N turns (each turn = 1 user message + 1 assistant message)
+  private limitConversationHistory(messages: ChatMessage[], maxTurns: number): ChatMessage[] {
+    if (messages.length <= maxTurns * 2) {
+      return messages;
+    }
+
+    // Keep first message if it's a system marker, then last N turns
+    const firstMessage = messages[0];
+    const isSystemMarker = firstMessage?.content.includes('[면접 시작]');
+
+    if (isSystemMarker) {
+      // Keep system marker + last N turns
+      return [firstMessage, ...messages.slice(-(maxTurns * 2))];
+    }
+
+    // Just return last N turns
+    return messages.slice(-(maxTurns * 2));
+  }
+
+  private enhanceSystemPrompt(
+    basePrompt: string,
     context?: string,
     userKeywords?: UserKeyword[],
-    industry?: string,
     difficulty?: 'easy' | 'medium' | 'hard',
-    turnCount?: number
+    turnCount?: number,
+    previousInterviewerId?: InterviewerType,
+    currentInterviewerId?: InterviewerType
   ): string {
-    // Base system prompt with interviewer persona
-    let prompt = `${interviewer.system_prompt}
+    let prompt = basePrompt;
 
-## 현재 면접 상황
-- 지원 포지션: ${position}
-- 산업 분야: ${industry || '일반 IT'}
-- 면접 난이도: ${this.getDifficultyLabel(difficulty)}
-- 현재 턴: ${turnCount || 1}번째 대화
-- 면접관: ${interviewer.name} (${interviewer.role})`;
+    // Add difficulty context
+    prompt += `
+
+## 면접 난이도: ${this.getDifficultyLabel(difficulty)}
+- 현재 ${turnCount || 1}번째 대화`;
 
     // Add document context (resume/portfolio)
     if (context) {
@@ -137,8 +182,7 @@ export class LLMRouter {
 ## 지원자 문서 정보 (이력서/포트폴리오)
 ${context}
 
-→ 이 정보를 바탕으로 구체적인 경험이나 프로젝트에 대해 질문하세요.
-→ 문서에 언급된 기술이나 프로젝트를 직접 언급하며 깊이 파고드세요.`;
+→ 이 정보를 바탕으로 구체적인 경험이나 프로젝트에 대해 질문하세요.`;
     }
 
     // Add user keywords from previous interviews for continuity
@@ -146,41 +190,40 @@ ${context}
       prompt += `
 
 ## 지원자의 이전 면접 키워드 (스펙 정보)
-이 지원자가 이전 면접에서 언급한 핵심 키워드들입니다.
-같은 주제를 다른 각도에서 질문하거나, 더 깊이 파고들어 보세요.
+이전 면접에서 언급한 핵심 키워드입니다. 다른 각도로 질문하세요.
 
-${this.formatKeywords(userKeywords)}
-
-→ 이전에 이미 다룬 주제는 다른 각도나 더 심화된 질문으로 접근하세요.
-→ 강점으로 언급된 부분은 실제 사례를 더 요청하세요.
-→ 약점으로 언급된 부분은 개선 노력을 확인하세요.`;
+${this.formatKeywords(userKeywords)}`;
     }
 
-    // Core interview instructions
+    // Add follow-up instruction based on previous interviewer
+    if (previousInterviewerId && currentInterviewerId) {
+      if (previousInterviewerId === currentInterviewerId) {
+        // Same interviewer - high probability of follow-up
+        prompt += `
+
+## 꼬리질문 지침 (같은 면접관 연속)
+방금 전 질문에 대한 지원자의 답변을 기반으로 꼬리질문을 하세요.
+- 더 구체적인 예시나 수치를 요청
+- 답변에서 언급된 기술/경험을 더 깊이 파고들기
+- "방금 말씀하신 ~에 대해 더 여쭤볼게요" 식으로 연결`;
+      } else {
+        // Different interviewer - transform or new question
+        prompt += `
+
+## 질문 전환 지침 (다른 면접관으로 교체)
+이전 면접관의 질문을 이어받되, 당신의 역할에 맞게 변형하세요.
+- 이전 주제를 당신의 관점에서 재질문 (예: 기술적 질문 → 협업 측면으로)
+- 또는 완전히 새로운 주제로 전환
+- "저는 다른 관점에서 여쭤볼게요" 식으로 자연스럽게 전환`;
+      }
+    }
+
+    // Core instructions
     prompt += `
 
-## 핵심 면접 지침
-
-### 1. 대화 기억 및 맥락 유지
-- 이전 대화 내용을 반드시 기억하고 참조하세요
-- 지원자가 언급한 프로젝트, 기술, 경험을 기억하고 후속 질문에 활용하세요
-- "아까 말씀하신 ~에 대해 더 여쭤볼게요" 같은 연결 표현을 사용하세요
-
-### 2. 꼬리질문 전략
-- 답변이 모호하면: 구체적인 예시나 수치를 요청하세요
-- 답변이 짧으면: "더 자세히 말씀해주시겠어요?" 등으로 확장 유도
-- 답변이 좋으면: 다른 각도에서 추가 질문하거나 관련 주제로 확장
-- 기술 언급 시: 왜 그 기술을 선택했는지, 장단점은 무엇인지 물어보세요
-
-### 3. 평가 기준
-- 답변의 구체성: 실제 경험에 기반한 구체적 사례인지
-- 논리적 사고: 문제 분석과 해결 과정이 논리적인지
-- 자기인식: 본인의 역할과 기여를 객관적으로 설명하는지
-- 성장 가능성: 학습 의지와 발전 방향이 명확한지
-
-### 4. 질문 형식
+## 핵심 지침
+- 이전 대화 맥락을 참조하여 질문하세요
 - 1-2문장의 간결한 질문
-- ${interviewer.name}의 성격(${interviewer.personality})에 맞는 말투 유지
 - 한국어로 자연스럽게 대화`;
 
     return prompt;
@@ -300,6 +343,8 @@ export async function generateInterviewerResponse(
     industry?: string;
     difficulty?: 'easy' | 'medium' | 'hard';
     turnCount?: number;
+    previousInterviewerId?: InterviewerType;
+    interviewerMbti?: MBTIType;
   }
 ): Promise<LLMResponse> {
   return llmRouter.generateResponse({
@@ -312,7 +357,11 @@ export async function generateInterviewerResponse(
   });
 }
 
-// Keyword extraction function
+// Re-export types for convenience
+export type { MBTIType } from '@/types/interview';
+export { getRandomMBTI } from '@/types/interview';
+
+// Keyword extraction function - uses GPT-4o-mini for cost efficiency
 export async function extractInterviewKeywords(
   conversationHistory: ChatMessage[],
   jobType: string
@@ -330,11 +379,10 @@ export async function extractInterviewKeywords(
 
 ## 추출 기준
 - 지원자가 직접 언급한 내용만 추출
-- 구체적이고 의미있는 키워드만 선별
-- 각 키워드에 대해 언급된 맥락 포함
+- 구체적이고 의미있는 키워드만 선별 (최대 15개)
+- 각 키워드에 대해 언급된 맥락 간략히 포함
 - 같은 키워드가 여러 번 언급되면 횟수 기록
 
-## 출력 형식
 JSON 형식으로 응답하세요.`;
 
   const userPrompt = `다음 면접 대화에서 지원자(user)의 답변을 분석하여 핵심 키워드를 추출하세요.
@@ -343,11 +391,12 @@ JSON 형식으로 응답하세요.`;
 대화 내용:
 ${conversationHistory.map(m => `[${m.role}]: ${m.content}`).join('\n')}
 
-위 대화에서 지원자에 대한 핵심 키워드를 추출하세요.`;
+핵심 키워드를 추출하세요.`;
 
   try {
+    // Use GPT-4o-mini for cost-effective keyword extraction
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
@@ -360,8 +409,8 @@ ${conversationHistory.map(m => `[${m.role}]: ${m.content}`).join('\n')}
           schema: KEYWORD_EXTRACTION_SCHEMA,
         },
       },
-      max_tokens: 1000,
-      temperature: 0.3,
+      max_tokens: 800,
+      temperature: 0.2,
     });
 
     const content = response.choices[0]?.message?.content || '{}';

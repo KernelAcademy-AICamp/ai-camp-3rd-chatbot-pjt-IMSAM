@@ -3,14 +3,15 @@
 // ============================================
 // POST /api/interview/start
 // - Creates new interview session
+// - Assigns random MBTI to each interviewer
 // - Returns first interviewer message
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { generateInterviewerResponse, type UserKeyword } from '@/lib/llm/router';
+import { generateInterviewerResponse, type UserKeyword, getRandomMBTI } from '@/lib/llm/router';
 import { ragService } from '@/lib/rag/service';
-import { INTERVIEWERS, type InterviewerType } from '@/types/interview';
+import { INTERVIEWER_BASE, type InterviewerType, type MBTIType } from '@/types/interview';
 
 export async function POST(req: NextRequest) {
   console.log('=== Interview Start API Called ===');
@@ -91,7 +92,24 @@ export async function POST(req: NextRequest) {
     console.log('User authenticated:', user.id, user.email);
     const userId = user.id;
 
-    // Create interview session
+    // Assign random MBTI to each interviewer for this session
+    const interviewerMbti: Record<InterviewerType, MBTIType> = {
+      hiring_manager: getRandomMBTI(),
+      hr_manager: getRandomMBTI(),
+      senior_peer: getRandomMBTI(),
+    };
+    console.log('Assigned interviewer MBTI:', interviewerMbti);
+
+    // Create interview session with MBTI assignments
+    const sessionTimerConfig = {
+      ...(timer_config || {
+        default_time_limit: 120,
+        warning_threshold: 30,
+        auto_submit_on_timeout: true,
+      }),
+      interviewer_mbti: interviewerMbti, // Store MBTI assignments in session
+    };
+
     const { data: session, error: sessionError } = await supabase
       .from('interview_sessions')
       .insert({
@@ -104,11 +122,7 @@ export async function POST(req: NextRequest) {
         status: 'active',
         turn_count: 0,
         max_turns: 10,
-        timer_config: timer_config || {
-          default_time_limit: 120,
-          warning_threshold: 30,
-          auto_submit_on_timeout: true,
-        },
+        timer_config: sessionTimerConfig,
         current_interviewer_id: 'hiring_manager',
       })
       .select()
@@ -178,11 +192,13 @@ export async function POST(req: NextRequest) {
       console.warn('Failed to load user keywords:', e);
     }
 
-    // Generate first message from hiring manager
+    // Generate first message from hiring manager with assigned MBTI
     const firstInterviewer: InterviewerType = 'hiring_manager';
-    const interviewer = INTERVIEWERS[firstInterviewer];
+    const interviewerBase = INTERVIEWER_BASE[firstInterviewer];
+    const firstInterviewerMbti = interviewerMbti[firstInterviewer];
 
     console.log('Generating first interviewer message via OpenAI...');
+    console.log('First interviewer MBTI:', firstInterviewerMbti);
 
     // Build context from uploaded documents
     const documentContext = [];
@@ -192,13 +208,6 @@ export async function POST(req: NextRequest) {
     if (portfolioContext) {
       documentContext.push(`[포트폴리오]\n${portfolioContext}`);
     }
-
-    const systemPrompt = `${interviewer.system_prompt}
-
-면접 시작 시 인사를 하고 첫 질문을 합니다.
-${documentContext.length > 0 ? `\n지원자 정보:\n${documentContext.join('\n\n')}` : ''}
-
-현재 상황: 면접이 막 시작되었습니다. 친절하게 인사하고 간단한 자기소개를 요청하세요.`;
 
     let response;
     try {
@@ -210,9 +219,10 @@ ${documentContext.length > 0 ? `\n지원자 정보:\n${documentContext.join('\n\
         documentContext.length > 0 ? documentContext.join('\n\n') : undefined,
         {
           userKeywords: userKeywords.length > 0 ? userKeywords : undefined,
-          industry,
+          industry: industry || 'IT/테크',
           difficulty,
           turnCount: 1,
+          interviewerMbti: firstInterviewerMbti,
         }
       );
       console.log('LLM response received, latency:', response.latencyMs, 'ms');
@@ -268,9 +278,10 @@ ${documentContext.length > 0 ? `\n지원자 정보:\n${documentContext.join('\n\
       },
       interviewer: {
         id: firstInterviewer,
-        name: interviewer.name,
-        role: interviewer.role,
-        emoji: interviewer.emoji,
+        name: interviewerBase.name,
+        role: interviewerBase.role,
+        emoji: interviewerBase.emoji,
+        personality: firstInterviewerMbti,
       },
     });
   } catch (error) {

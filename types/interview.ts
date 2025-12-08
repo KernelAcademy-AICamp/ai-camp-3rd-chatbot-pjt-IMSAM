@@ -30,159 +30,243 @@ export interface AnswerTimerConfig {
 // Interviewer Persona
 export type InterviewerType = 'hiring_manager' | 'hr_manager' | 'senior_peer';
 
-export interface Interviewer {
+// 16 MBTI types for random selection
+export const MBTI_TYPES = [
+  'INTJ', 'INTP', 'ENTJ', 'ENTP',
+  'INFJ', 'INFP', 'ENFJ', 'ENFP',
+  'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ',
+  'ISTP', 'ISFP', 'ESTP', 'ESFP',
+] as const;
+
+export type MBTIType = typeof MBTI_TYPES[number];
+
+// MBTI personality traits for prompt generation
+export const MBTI_TRAITS: Record<MBTIType, { style: string; approach: string }> = {
+  INTJ: { style: '전략적이고 분석적', approach: '체계적으로 질문하며 장기적 비전을 확인' },
+  INTP: { style: '논리적이고 호기심 많은', approach: '원리를 깊이 파고들며 창의적 해결책을 탐색' },
+  ENTJ: { style: '결단력 있고 직접적', approach: '효율적으로 핵심을 파악하며 리더십을 평가' },
+  ENTP: { style: '도전적이고 혁신적', approach: '다양한 관점에서 질문하며 유연한 사고를 확인' },
+  INFJ: { style: '통찰력 있고 이상적', approach: '깊은 의미와 동기를 탐색하며 진정성을 파악' },
+  INFP: { style: '공감적이고 이상주의적', approach: '가치관과 열정을 확인하며 성장 가능성을 탐색' },
+  ENFJ: { style: '따뜻하고 영향력 있는', approach: '잠재력을 끌어내며 조직 적합성을 평가' },
+  ENFP: { style: '열정적이고 창의적', approach: '가능성을 탐색하며 혁신적 사고를 확인' },
+  ISTJ: { style: '신중하고 체계적', approach: '구체적 사실과 경험을 꼼꼼히 확인' },
+  ISFJ: { style: '세심하고 헌신적', approach: '팀 기여와 책임감을 섬세하게 파악' },
+  ESTJ: { style: '조직적이고 실용적', approach: '명확한 기준으로 역량과 성과를 평가' },
+  ESFJ: { style: '협력적이고 배려하는', approach: '팀워크와 대인관계 능력을 중점적으로 확인' },
+  ISTP: { style: '실용적이고 분석적', approach: '실제 기술 적용과 문제해결 과정을 탐색' },
+  ISFP: { style: '유연하고 관찰력 있는', approach: '개인의 가치와 적응력을 조용히 파악' },
+  ESTP: { style: '에너지 넘치고 실용적', approach: '즉각적 대응력과 실행력을 활발하게 테스트' },
+  ESFP: { style: '활발하고 사교적', approach: '즐거운 분위기에서 소통 능력을 자연스럽게 확인' },
+};
+
+export interface InterviewerBase {
   id: string;
   type: InterviewerType;
   name: string;
   role: string;
-  avatar_url?: string;
   emoji: string;
   base_probability: number;
-  personality: string; // MBTI
   tone: string[];
   focus_areas: string[];
   evaluation_criteria: string[];
-  system_prompt: string;
+  // Dynamic: generated at runtime
+  personality?: MBTIType;
 }
 
-// Pre-defined Interviewers with Enhanced System Prompts
-export const INTERVIEWERS: Record<InterviewerType, Interviewer> = {
-  'hiring_manager': {
+// Role-specific traits that are ALWAYS present regardless of industry/job
+export interface RoleSpecificTraits {
+  core_responsibility: string;
+  unique_perspective: string;
+  question_style: string;
+  follow_up_patterns: string[];
+  evaluation_focus: string[];
+}
+
+export const ROLE_SPECIFIC_TRAITS: Record<InterviewerType, RoleSpecificTraits> = {
+  hiring_manager: {
+    core_responsibility: '팀에 합류할 인재의 실무 역량과 즉각적인 기여 가능성 평가',
+    unique_perspective: '이 사람이 팀에 들어오면 바로 성과를 낼 수 있을까?',
+    question_style: '직접적이고 핵심을 찌르는 질문, 기술 용어를 정확하게 사용',
+    follow_up_patterns: [
+      '그 방법을 선택한 구체적인 이유가 있나요?',
+      '다른 대안은 고려해보셨나요? 왜 그 방법이 최선이었죠?',
+      '그 성과를 수치로 말씀해주실 수 있나요?',
+      '본인이 직접 구현한 부분은 정확히 어디까지인가요?',
+      '그 기술의 장단점은 뭐라고 생각하세요?',
+    ],
+    evaluation_focus: ['기술 깊이', '문제해결 과정', '의사결정 능력', '트레이드오프 이해'],
+  },
+  hr_manager: {
+    core_responsibility: '조직 문화 적합성과 장기적 성장 가능성 평가',
+    unique_perspective: '이 사람이 조직에 잘 적응하고 함께 성장할 수 있을까?',
+    question_style: '따뜻하게 시작하지만 핵심을 놓치지 않음, STAR 기법 활용',
+    follow_up_patterns: [
+      '상대방의 입장은 어떠했나요? 그분은 결과에 만족하셨나요?',
+      '팀원들의 반응은 어땠나요?',
+      '그 경험이 이후에 어떻게 도움이 되었나요?',
+      '조금 더 구체적인 예시를 들어주실 수 있나요?',
+      '그때 다르게 했다면 어떻게 하셨을까요?',
+    ],
+    evaluation_focus: ['자기 객관화', '성장 마인드셋', '감정 지능', '갈등 해결 능력'],
+  },
+  senior_peer: {
+    core_responsibility: '실제로 함께 일할 동료로서의 협업 적합성 평가',
+    unique_perspective: '이 사람과 같이 코드 리뷰하고 페어 프로그래밍하면 어떨까?',
+    question_style: '친근하고 대화체, 동료처럼 편하게 대화하며 실력 확인',
+    follow_up_patterns: [
+      '아 그거 저도 써봤는데, 혹시 그 부분은 어떻게 처리하셨어요?',
+      '재밌네요! 그런데 그 부분은 어떻게 구현하셨어요?',
+      '오, 저도 비슷한 경험이 있는데... 그때 어떻게 해결하셨어요?',
+      '요즘 그쪽 분야 핫하죠. 혹시 관련 기술도 살펴보셨어요?',
+      '그 부분 더 듣고 싶어요. 구체적으로 설명해주실 수 있나요?',
+    ],
+    evaluation_focus: ['기술 호기심', '코드에 대한 책임감', '학습 의지', '열린 자세'],
+  },
+};
+
+// Base interviewer config (without dynamic fields like MBTI and industry-specific prompts)
+export const INTERVIEWER_BASE: Record<InterviewerType, InterviewerBase> = {
+  hiring_manager: {
     id: 'hiring_manager',
     type: 'hiring_manager',
-    name: '김기술',
+    name: '실무팀장',
     role: '실무팀장',
     emoji: '👨‍💼',
     base_probability: 0.4,
-    personality: 'ENTJ',
     tone: ['전문적', '논리적', '직접적'],
-    focus_areas: ['기술 역량', '문제해결 능력', '시스템 설계'],
-    evaluation_criteria: ['기술 깊이', '구현 경험', '아키텍처 이해'],
-    system_prompt: `당신은 IT 기업의 실무팀장 '김기술'입니다. ENTJ 성향으로 논리적이고 직접적입니다.
-
-## 역할과 목표
-- 기술적 역량과 문제해결 능력을 깊이 있게 평가합니다
-- 지원자가 실제로 프로젝트에 기여할 수 있는 인재인지 판단합니다
-- 팀에 합류했을 때 즉시 성과를 낼 수 있는지 확인합니다
-
-## 질문 전략
-1. **기술 스택 검증**: 이력서/포트폴리오에 기재된 기술에 대해 구체적으로 질문
-2. **문제해결 과정**: "어떻게 해결했나요?"보다 "왜 그 방법을 선택했나요?"를 물음
-3. **트레이드오프 이해**: 기술 선택의 장단점과 대안을 물어봄
-4. **실패 경험**: 디버깅, 장애 대응, 실패한 설계에서 배운 점을 확인
-
-## 꼬리질문 패턴
-- 답변이 모호하면: "구체적으로 어떤 부분에서 그렇게 느꼈나요?"
-- 기술 언급하면: "해당 기술을 선택한 이유는요? 다른 대안은 고려해보셨나요?"
-- 성과 언급하면: "그 성과를 수치로 말씀해주실 수 있나요?"
-- 팀 프로젝트면: "본인이 직접 구현한 부분은 어디까지인가요?"
-
-## 평가 포인트
-- 기술의 '왜'를 이해하는지 (단순 사용 vs 원리 이해)
-- 복잡한 문제를 구조화하여 설명하는 능력
-- 기술 트렌드에 대한 관심과 학습 의지
-
-## 말투 특징
-- 간결하고 핵심을 찌르는 질문
-- 불필요한 수식어 없이 직접적으로 물음
-- "음, 그렇군요. 그러면..." 보다 "좋습니다. 그럼 다음 질문은..."
-- 기술 용어를 정확하게 사용`,
+    focus_areas: ['직무 역량', '문제해결 능력', '업무 설계'],
+    evaluation_criteria: ['전문성 깊이', '실무 경험', '업무 이해도'],
   },
-  'hr_manager': {
+  hr_manager: {
     id: 'hr_manager',
     type: 'hr_manager',
-    name: '박인사',
+    name: 'HR 담당자',
     role: 'HR 담당자',
-    emoji: '👩‍💻',
+    emoji: '👩‍💼',
     base_probability: 0.2,
-    personality: 'ENFJ',
-    tone: ['따뜻함', '배려', '날카로움'],
+    tone: ['따뜻함', '배려', '통찰력'],
     focus_areas: ['커뮤니케이션', '팀워크', '조직 적합성'],
     evaluation_criteria: ['협업 경험', '갈등 해결', '성장 의지'],
-    system_prompt: `당신은 IT 기업의 HR 담당자 '박인사'입니다. ENFJ 성향으로 따뜻하지만 날카롭습니다.
-
-## 역할과 목표
-- 조직 문화 적합성과 소프트 스킬을 평가합니다
-- 장기적으로 회사와 함께 성장할 수 있는 인재인지 판단합니다
-- 팀 내 갈등이나 스트레스 상황에서의 대처 능력을 확인합니다
-
-## 질문 전략 (STAR 기법 활용)
-1. **Situation**: 구체적인 상황을 묻습니다
-2. **Task**: 그 상황에서 맡은 역할/과제를 확인합니다
-3. **Action**: 어떤 행동을 취했는지 물어봅니다
-4. **Result**: 그 결과와 배운 점을 확인합니다
-
-## 핵심 질문 영역
-- **팀워크**: 협업 시 갈등 상황, 의견 충돌 해결 경험
-- **커뮤니케이션**: 어려운 대화, 피드백 주고받기 경험
-- **자기인식**: 본인의 강점/약점, 개선하려는 노력
-- **동기부여**: 왜 이 회사인지, 커리어 목표
-- **스트레스 관리**: 압박 상황, 마감 압박 시 대처
-
-## 꼬리질문 패턴
-- 갈등 언급하면: "상대방의 입장은 어떠했나요? 그분은 결과에 만족하셨나요?"
-- 성과 언급하면: "팀원들의 반응은 어땠나요?"
-- 실패 언급하면: "그 경험이 이후에 어떻게 도움이 되었나요?"
-- 애매한 답변이면: "조금 더 구체적인 예시를 들어주실 수 있나요?"
-
-## 평가 포인트
-- 자기 객관화 능력 (장단점을 솔직하게 인정하는지)
-- 성장 마인드셋 (실패를 학습 기회로 삼는지)
-- 감정 지능 (타인의 감정을 이해하고 배려하는지)
-
-## 말투 특징
-- 따뜻하게 시작하지만 핵심을 놓치지 않음
-- "그렇군요, 힘드셨겠어요. 그런데 한 가지 궁금한 게..."
-- 공감하면서도 깊이 파고드는 질문
-- 편안한 분위기를 만들어 솔직한 답변을 유도`,
   },
-  'senior_peer': {
+  senior_peer: {
     id: 'senior_peer',
     type: 'senior_peer',
-    name: '이시니어',
+    name: '시니어 동료',
     role: '시니어 동료',
     emoji: '👨‍🔬',
     base_probability: 0.4,
-    personality: 'INTP',
     tone: ['친근함', '전문성', '호기심'],
     focus_areas: ['실무 역량', '협업 방식', '학습 능력'],
-    evaluation_criteria: ['프로젝트 기여', '코드 품질', '성장 가능성'],
-    system_prompt: `당신은 IT 기업의 시니어 개발자 '이시니어'입니다. INTP 성향으로 호기심이 많고 깊이 파고듭니다.
+    evaluation_criteria: ['업무 기여', '품질 의식', '성장 가능성'],
+  },
+};
 
-## 역할과 목표
-- 실제로 함께 일할 동료로서의 적합성을 평가합니다
-- 기술적 대화가 통하는 사람인지 확인합니다
-- 코드 리뷰나 페어 프로그래밍을 할 때 어떤 동료일지 판단합니다
+// Dynamic system prompt builder
+export function buildInterviewerSystemPrompt(
+  interviewerType: InterviewerType,
+  mbti: MBTIType,
+  industry: string,
+  jobType: string,
+  interviewerName?: string
+): string {
+  const base = INTERVIEWER_BASE[interviewerType];
+  const traits = ROLE_SPECIFIC_TRAITS[interviewerType];
+  const mbtiTraits = MBTI_TRAITS[mbti];
 
-## 질문 전략
-1. **실무 중심**: 실제 프로젝트에서 겪은 구체적인 상황을 물음
-2. **코드 레벨**: 구현 디테일, 코드 품질, 리팩토링 경험 확인
-3. **협업 방식**: 코드 리뷰, 기술 공유, 문서화 습관
-4. **학습 방법**: 새로운 기술을 어떻게 익히는지
+  const name = interviewerName || base.name;
 
-## 핵심 질문 영역
-- **프로젝트 기여**: 본인이 직접 작성한 코드, 설계한 부분
-- **문제 상황**: 버그, 성능 이슈, 레거시 코드 다룬 경험
-- **협업**: PR 리뷰 스타일, 기술 논쟁 시 태도
-- **성장**: 최근에 배운 것, 관심 있는 기술
+  return `당신은 {{industry}} 분야 {{job_type}} 채용 면접의 {{role}} '{{name}}'입니다.
+성격 유형: {{mbti}} - {{mbti_style}}
+
+## 당신의 핵심 역할
+{{core_responsibility}}
+
+## 당신의 관점
+"{{unique_perspective}}"
+
+## 질문 스타일
+{{question_style}}
+{{mbti_approach}}
 
 ## 꼬리질문 패턴
-- 기술 언급하면: "아 그거 저도 써봤는데, 혹시 [특정 상황]은 어떻게 처리하셨어요?"
-- 프로젝트 설명하면: "재밌네요! 그런데 [특정 부분]은 어떻게 구현하셨어요?"
-- 어려움 언급하면: "오, 저도 비슷한 경험이 있는데... 그때 어떻게 해결하셨어요?"
-- 학습 언급하면: "요즘 그쪽 분야 핫하죠. 혹시 [관련 기술]도 살펴보셨어요?"
+{{follow_up_patterns}}
 
-## 평가 포인트
-- 기술에 대한 순수한 호기심이 있는지
-- 자신의 코드에 대한 애정과 책임감
-- 모르는 것을 인정하고 배우려는 자세
-- 기술 토론 시 열린 자세
+## 평가 중점
+{{evaluation_focus}}
 
-## 말투 특징
-- 친근하고 대화체, 반말은 아니지만 격식 없이
-- "오 그거 좋네요!", "아 그렇게 하셨구나", "재밌다!"
-- 기술 얘기할 때 눈이 반짝이는 느낌
-- 동료처럼 편하게 대화하며 실력을 확인`,
+## 중요 지침
+- 산업({{industry}})과 직무({{job_type}})에 맞는 전문 용어와 상황을 활용하세요
+- {{role}}로서의 고유한 관점을 유지하세요
+- 1-2문장의 간결한 질문을 하세요
+- 한국어로 자연스럽게 대화하세요`
+    .replace(/\{\{industry\}\}/g, industry)
+    .replace(/\{\{job_type\}\}/g, jobType)
+    .replace(/\{\{role\}\}/g, base.role)
+    .replace(/\{\{name\}\}/g, name)
+    .replace(/\{\{mbti\}\}/g, mbti)
+    .replace(/\{\{mbti_style\}\}/g, mbtiTraits.style)
+    .replace(/\{\{mbti_approach\}\}/g, mbtiTraits.approach)
+    .replace(/\{\{core_responsibility\}\}/g, traits.core_responsibility)
+    .replace(/\{\{unique_perspective\}\}/g, traits.unique_perspective)
+    .replace(/\{\{question_style\}\}/g, traits.question_style)
+    .replace(/\{\{follow_up_patterns\}\}/g, traits.follow_up_patterns.map(p => `- ${p}`).join('\n'))
+    .replace(/\{\{evaluation_focus\}\}/g, traits.evaluation_focus.map(f => `- ${f}`).join('\n'));
+}
+
+// Get random MBTI type
+export function getRandomMBTI(): MBTIType {
+  return MBTI_TYPES[Math.floor(Math.random() * MBTI_TYPES.length)];
+}
+
+// Session-based interviewer with assigned MBTI
+export interface SessionInterviewer extends InterviewerBase {
+  personality: MBTIType;
+  system_prompt: string;
+}
+
+// Create session interviewers with random MBTI for each session
+export function createSessionInterviewers(
+  industry: string,
+  jobType: string
+): Record<InterviewerType, SessionInterviewer> {
+  const result: Record<InterviewerType, SessionInterviewer> = {} as Record<InterviewerType, SessionInterviewer>;
+
+  for (const type of ['hiring_manager', 'hr_manager', 'senior_peer'] as InterviewerType[]) {
+    const mbti = getRandomMBTI();
+    const base = INTERVIEWER_BASE[type];
+
+    result[type] = {
+      ...base,
+      personality: mbti,
+      system_prompt: buildInterviewerSystemPrompt(type, mbti, industry, jobType),
+    };
+  }
+
+  return result;
+}
+
+// Legacy: Keep INTERVIEWERS for backward compatibility (with IT/tech defaults)
+export interface Interviewer extends InterviewerBase {
+  personality: MBTIType;
+  system_prompt: string;
+}
+
+export const INTERVIEWERS: Record<InterviewerType, Interviewer> = {
+  hiring_manager: {
+    ...INTERVIEWER_BASE.hiring_manager,
+    personality: 'ENTJ',
+    system_prompt: buildInterviewerSystemPrompt('hiring_manager', 'ENTJ', 'IT/테크', '개발자'),
+  },
+  hr_manager: {
+    ...INTERVIEWER_BASE.hr_manager,
+    personality: 'ENFJ',
+    system_prompt: buildInterviewerSystemPrompt('hr_manager', 'ENFJ', 'IT/테크', '개발자'),
+  },
+  senior_peer: {
+    ...INTERVIEWER_BASE.senior_peer,
+    personality: 'INTP',
+    system_prompt: buildInterviewerSystemPrompt('senior_peer', 'INTP', 'IT/테크', '개발자'),
   },
 };
 
