@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { generateInterviewerResponse, type ChatMessage } from '@/lib/llm/router';
+import { generateInterviewerResponse, type ChatMessage, type UserKeyword } from '@/lib/llm/router';
 import { ragService } from '@/lib/rag/service';
 import { INTERVIEWERS, type InterviewerType } from '@/types/interview';
 
@@ -163,13 +163,41 @@ export async function POST(req: NextRequest) {
 
     const context = contextParts.join('\n\n');
 
-    // Generate interviewer response with RAG context
+    // Get user's previous interview keywords for continuity
+    let userKeywords: UserKeyword[] = [];
+    try {
+      const { data: keywordsData } = await supabase
+        .from('user_keywords')
+        .select('keyword, category, context, mentioned_count')
+        .eq('user_id', session.user_id)
+        .order('mentioned_count', { ascending: false })
+        .limit(20);
+
+      if (keywordsData && keywordsData.length > 0) {
+        userKeywords = keywordsData.map(kw => ({
+          keyword: kw.keyword,
+          category: kw.category as UserKeyword['category'],
+          context: kw.context || undefined,
+          mentioned_count: kw.mentioned_count,
+        }));
+      }
+    } catch (e) {
+      console.warn('Failed to load user keywords:', e);
+    }
+
+    // Generate interviewer response with RAG context and keywords
     const llmResponse = await generateInterviewerResponse(
       conversationHistory,
       nextInterviewerId,
       session.job_type,
       true, // Use structured output
-      context || undefined // Pass RAG context from resume and portfolio
+      context || undefined, // Pass RAG context from resume and portfolio
+      {
+        userKeywords: userKeywords.length > 0 ? userKeywords : undefined,
+        industry: session.industry || undefined,
+        difficulty: session.difficulty as 'easy' | 'medium' | 'hard',
+        turnCount: session.turn_count + 1,
+      }
     );
 
     // Save interviewer message

@@ -268,6 +268,60 @@ export interface Database {
           follow_ups?: string[] | null;
         };
       };
+      user_keywords: {
+        Row: {
+          id: string;
+          user_id: string;
+          session_id: string | null;
+          keyword: string;
+          category: 'technical' | 'soft_skill' | 'experience' | 'project' | 'strength' | 'weakness';
+          context: string | null;
+          mentioned_count: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          session_id?: string | null;
+          keyword: string;
+          category: 'technical' | 'soft_skill' | 'experience' | 'project' | 'strength' | 'weakness';
+          context?: string | null;
+          mentioned_count?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          keyword?: string;
+          category?: 'technical' | 'soft_skill' | 'experience' | 'project' | 'strength' | 'weakness';
+          context?: string | null;
+          mentioned_count?: number;
+          updated_at?: string;
+        };
+      };
+      user_interview_summaries: {
+        Row: {
+          id: string;
+          user_id: string;
+          session_id: string;
+          summary: string;
+          job_type: string;
+          industry: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          session_id: string;
+          summary: string;
+          job_type: string;
+          industry?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          summary?: string;
+        };
+      };
     };
     Views: {
       [_ in never]: never;
@@ -293,6 +347,17 @@ export interface Database {
         };
         Returns: number;
       };
+      upsert_user_keyword: {
+        Args: {
+          p_user_id: string;
+          p_session_id: string;
+          p_keyword: string;
+          p_category: 'technical' | 'soft_skill' | 'experience' | 'project' | 'strength' | 'weakness';
+          p_context: string | null;
+          p_mentioned_count: number;
+        };
+        Returns: void;
+      };
     };
     Enums: {
       difficulty_level: 'easy' | 'medium' | 'hard';
@@ -300,6 +365,7 @@ export interface Database {
       message_role: 'user' | 'interviewer' | 'system';
       document_type: 'resume' | 'company' | 'job_description' | 'portfolio';
       pass_status: 'pass' | 'borderline' | 'fail';
+      keyword_category: 'technical' | 'soft_skill' | 'experience' | 'project' | 'strength' | 'weakness';
     };
   };
 }

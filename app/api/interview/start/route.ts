@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { generateInterviewerResponse } from '@/lib/llm/router';
+import { generateInterviewerResponse, type UserKeyword } from '@/lib/llm/router';
 import { ragService } from '@/lib/rag/service';
 import { INTERVIEWERS, type InterviewerType } from '@/types/interview';
 
@@ -155,6 +155,29 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Get user's previous interview keywords for continuity
+    let userKeywords: UserKeyword[] = [];
+    try {
+      const { data: keywordsData } = await supabase
+        .from('user_keywords')
+        .select('keyword, category, context, mentioned_count')
+        .eq('user_id', userId)
+        .order('mentioned_count', { ascending: false })
+        .limit(20); // Top 20 most mentioned keywords
+
+      if (keywordsData && keywordsData.length > 0) {
+        userKeywords = keywordsData.map(kw => ({
+          keyword: kw.keyword,
+          category: kw.category as UserKeyword['category'],
+          context: kw.context || undefined,
+          mentioned_count: kw.mentioned_count,
+        }));
+        console.log('Loaded user keywords:', userKeywords.length);
+      }
+    } catch (e) {
+      console.warn('Failed to load user keywords:', e);
+    }
+
     // Generate first message from hiring manager
     const firstInterviewer: InterviewerType = 'hiring_manager';
     const interviewer = INTERVIEWERS[firstInterviewer];
@@ -183,7 +206,14 @@ ${documentContext.length > 0 ? `\n지원자 정보:\n${documentContext.join('\n\
         [{ role: 'user', content: '[면접 시작] 지원자가 입장했습니다.' }],
         firstInterviewer,
         job_type,
-        false
+        false,
+        documentContext.length > 0 ? documentContext.join('\n\n') : undefined,
+        {
+          userKeywords: userKeywords.length > 0 ? userKeywords : undefined,
+          industry,
+          difficulty,
+          turnCount: 1,
+        }
       );
       console.log('LLM response received, latency:', response.latencyMs, 'ms');
     } catch (llmError) {
