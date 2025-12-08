@@ -174,9 +174,6 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Config for larger file uploads
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+// Route segment config for larger file uploads
+export const runtime = 'nodejs';
+export const maxDuration = 60;
