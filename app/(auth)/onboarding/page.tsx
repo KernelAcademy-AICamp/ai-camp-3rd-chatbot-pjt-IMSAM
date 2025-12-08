@@ -84,17 +84,19 @@ export default function OnboardingPage() {
         .eq("id", user.id)
         .single();
 
-      if (profile?.job_type) {
+      const profileData = profile as { full_name?: string; job_type?: string; industry?: string } | null;
+
+      if (profileData?.job_type) {
         // Already completed onboarding
         router.push("/dashboard");
         return;
       }
 
       // Pre-fill name if available
-      if (profile?.full_name || user.user_metadata?.full_name) {
+      if (profileData?.full_name || user.user_metadata?.full_name) {
         setFormData(prev => ({
           ...prev,
-          full_name: profile?.full_name || user.user_metadata?.full_name || "",
+          full_name: profileData?.full_name || user.user_metadata?.full_name || "",
         }));
       }
 
