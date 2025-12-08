@@ -3,7 +3,7 @@
 // ============================================
 // POST /api/interview/start
 // - Creates new interview session
-// - Assigns random MBTI to each interviewer
+// - Assigns random MBTI and names to each interviewer
 // - Returns first interviewer message
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -11,7 +11,13 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { generateInterviewerResponse, type UserKeyword, getRandomMBTI } from '@/lib/llm/router';
 import { ragService } from '@/lib/rag/service';
-import { INTERVIEWER_BASE, type InterviewerType, type MBTIType } from '@/types/interview';
+import {
+  INTERVIEWER_BASE,
+  type InterviewerType,
+  type MBTIType,
+  generateSessionInterviewerNames,
+  type SessionInterviewerNames,
+} from '@/types/interview';
 
 export async function POST(req: NextRequest) {
   console.log('=== Interview Start API Called ===');
@@ -100,14 +106,36 @@ export async function POST(req: NextRequest) {
     };
     console.log('Assigned interviewer MBTI:', interviewerMbti);
 
-    // Create interview session with MBTI assignments
+    // Assign random names to each interviewer for this session
+    // Try to get from DB first, fallback to local names
+    let interviewerNames: SessionInterviewerNames;
+    try {
+      const { data: dbNames } = await supabase.rpc('get_random_interviewer_names');
+      if (dbNames && dbNames.length > 0) {
+        interviewerNames = {
+          hiring_manager: dbNames[0].hiring_manager_name,
+          hr_manager: dbNames[0].hr_manager_name,
+          senior_peer: dbNames[0].senior_peer_name,
+        };
+        console.log('Got interviewer names from DB:', interviewerNames);
+      } else {
+        interviewerNames = generateSessionInterviewerNames();
+        console.log('Using fallback interviewer names:', interviewerNames);
+      }
+    } catch (e) {
+      console.warn('Failed to get names from DB, using fallback:', e);
+      interviewerNames = generateSessionInterviewerNames();
+    }
+
+    // Create interview session with MBTI and name assignments
     const sessionTimerConfig = {
       ...(timer_config || {
         default_time_limit: 120,
         warning_threshold: 30,
         auto_submit_on_timeout: true,
       }),
-      interviewer_mbti: interviewerMbti, // Store MBTI assignments in session
+      interviewer_mbti: interviewerMbti, // Store MBTI assignments
+      interviewer_names: interviewerNames, // Store name assignments
     };
 
     const { data: session, error: sessionError } = await supabase
@@ -278,11 +306,13 @@ export async function POST(req: NextRequest) {
       },
       interviewer: {
         id: firstInterviewer,
-        name: interviewerBase.name,
+        name: interviewerNames[firstInterviewer], // Use randomly assigned name
         role: interviewerBase.role,
         emoji: interviewerBase.emoji,
         personality: firstInterviewerMbti,
       },
+      // All interviewer names for client display
+      interviewer_names: interviewerNames,
     });
   } catch (error) {
     console.error('=== Interview Start Error ===');

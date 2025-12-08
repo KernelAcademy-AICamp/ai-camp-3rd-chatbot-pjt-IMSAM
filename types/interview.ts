@@ -219,27 +219,70 @@ export function getRandomMBTI(): MBTIType {
   return MBTI_TYPES[Math.floor(Math.random() * MBTI_TYPES.length)];
 }
 
-// Session-based interviewer with assigned MBTI
+// Fallback interviewer names (used when DB is not available)
+export const FALLBACK_INTERVIEWER_NAMES: Record<InterviewerType, string[]> = {
+  hiring_manager: [
+    '김기술', '이준혁', '박성민', '정우진', '최동현',
+    '김지현', '이수진', '박소연', '정민아', '최유진',
+  ],
+  hr_manager: [
+    '박인사', '김민준', '이승호', '정재원', '최현석',
+    '김하은', '이서연', '박지은', '정수빈', '최예진',
+  ],
+  senior_peer: [
+    '이시니어', '김현준', '박진우', '정태영', '최민혁',
+    '김다은', '이유나', '박세아', '정하린', '최서현',
+  ],
+};
+
+// Get random name from fallback list
+export function getRandomInterviewerName(roleType: InterviewerType): string {
+  const names = FALLBACK_INTERVIEWER_NAMES[roleType];
+  return names[Math.floor(Math.random() * names.length)];
+}
+
+// Session interviewer names assignment
+export interface SessionInterviewerNames {
+  hiring_manager: string;
+  hr_manager: string;
+  senior_peer: string;
+}
+
+// Generate random names for all interviewers in a session
+export function generateSessionInterviewerNames(): SessionInterviewerNames {
+  return {
+    hiring_manager: getRandomInterviewerName('hiring_manager'),
+    hr_manager: getRandomInterviewerName('hr_manager'),
+    senior_peer: getRandomInterviewerName('senior_peer'),
+  };
+}
+
+// Session-based interviewer with assigned MBTI and name
 export interface SessionInterviewer extends InterviewerBase {
   personality: MBTIType;
   system_prompt: string;
+  assignedName: string; // Randomly assigned name for this session
 }
 
-// Create session interviewers with random MBTI for each session
+// Create session interviewers with random MBTI and names for each session
 export function createSessionInterviewers(
   industry: string,
-  jobType: string
+  jobType: string,
+  names?: SessionInterviewerNames
 ): Record<InterviewerType, SessionInterviewer> {
   const result: Record<InterviewerType, SessionInterviewer> = {} as Record<InterviewerType, SessionInterviewer>;
+  const assignedNames = names || generateSessionInterviewerNames();
 
   for (const type of ['hiring_manager', 'hr_manager', 'senior_peer'] as InterviewerType[]) {
     const mbti = getRandomMBTI();
     const base = INTERVIEWER_BASE[type];
+    const assignedName = assignedNames[type];
 
     result[type] = {
       ...base,
       personality: mbti,
-      system_prompt: buildInterviewerSystemPrompt(type, mbti, industry, jobType),
+      system_prompt: buildInterviewerSystemPrompt(type, mbti, industry, jobType, assignedName),
+      assignedName,
     };
   }
 

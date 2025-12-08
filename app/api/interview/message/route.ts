@@ -149,12 +149,14 @@ export async function POST(req: NextRequest) {
     );
     const interviewerBase = INTERVIEWER_BASE[nextInterviewerId];
 
-    // Get interviewer MBTI from session metadata or generate new one
+    // Get interviewer MBTI and name from session metadata
     interface SessionMetadata {
       interviewer_mbti?: Record<InterviewerType, MBTIType>;
+      interviewer_names?: Record<InterviewerType, string>;
     }
     const sessionMetadata = (session.timer_config as unknown as SessionMetadata) || {};
     const interviewerMbti = sessionMetadata.interviewer_mbti?.[nextInterviewerId] as MBTIType | undefined;
+    const interviewerName = sessionMetadata.interviewer_names?.[nextInterviewerId] || interviewerBase.name;
 
     // Get relevant context from RAG (both resume and portfolio)
     const contextParts: string[] = [];
@@ -282,7 +284,7 @@ export async function POST(req: NextRequest) {
       },
       interviewer: {
         id: nextInterviewerId,
-        name: interviewerBase.name,
+        name: interviewerName, // Use session-assigned name
         role: interviewerBase.role,
         emoji: interviewerBase.emoji,
       },
