@@ -108,8 +108,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Type for message
+    interface MessageRow {
+      role: string;
+      content: string;
+      interviewer_id?: string;
+    }
+
     // Build conversation transcript for evaluation
-    const transcript = messages
+    const transcript = (messages as MessageRow[])
       .map(msg => {
         const speaker = msg.role === 'user' ? '지원자' :
           INTERVIEWERS[msg.interviewer_id as InterviewerType]?.name || '면접관';
