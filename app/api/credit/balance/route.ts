@@ -38,14 +38,14 @@ export async function GET(_req: NextRequest) {
   const userId = authData.user.id;
 
   // Ensure account row exists (initialize with 10,000 credits if new)
-  await supabase
+  await (supabase as any)
     .from('credits')
     .upsert(
-      { 
-        user_id: userId, 
-        current_credits: 10000, 
-        total_earned: 10000 
-      }, 
+      {
+        user_id: userId,
+        current_credits: 10000,
+        total_earned: 10000
+      },
       { onConflict: 'user_id', ignoreDuplicates: true }
     );
 
