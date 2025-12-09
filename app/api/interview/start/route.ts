@@ -356,7 +356,7 @@ export async function POST(req: NextRequest) {
         .limit(20); // Top 20 most mentioned keywords
 
       if (keywordsData && keywordsData.length > 0) {
-        userKeywords = keywordsData.map(kw => ({
+        userKeywords = keywordsData.map((kw: any) => ({
           keyword: kw.keyword,
           category: kw.category as UserKeyword['category'],
           context: kw.context || undefined,
