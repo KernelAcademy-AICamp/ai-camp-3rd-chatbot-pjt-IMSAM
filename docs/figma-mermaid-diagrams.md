@@ -1,879 +1,546 @@
-# IMSAM AI Interview - Figma Mermaid 다이어그램
+# IMSAM AI Interview - PPT용 Figma 다이어그램
 
-> Mermaid to Figma 플러그인용 코드 모음
+> PPT 슬라이드 비율(16:9)에 최적화된 가로형 다이어그램
 > 문서 생성일: 2025년
 
 ---
 
-## 1. 서비스 주요 기능 (우선순위별)
+## 🎨 브랜드 컬러
 
-### 1-1. 기능 우선순위 맵
-```mermaid
-flowchart TB
-    subgraph Priority1["🥇 1순위 - 핵심 기능"]
-        A1[멀티 관점 AI 면접<br/>3인 면접관 시스템]
-        A2[실시간 스트리밍 면접<br/>E2E 2.5초 이내]
-        A3[RAG 기반 맞춤 질문<br/>하이브리드 검색]
-    end
-
-    subgraph Priority2["🥈 2순위 - 분석/평가"]
-        B1[5축 역량 평가<br/>가중치 기반 점수]
-        B2[음성 분석<br/>WPM/추임새/자신감]
-    end
-
-    subgraph Priority3["🥉 3순위 - 부가 기능"]
-        C1[대시보드<br/>히스토리/리포트]
-        C2[문서 관리<br/>이력서/포트폴리오]
-    end
-
-    Priority1 --> Priority2 --> Priority3
+```
+Mint:    #00D9A3    Navy:    #0A1628    Purple:  #6C63FF
+Pink:    #FF6B9D    Blue:    #A8C5FF    Green:   #10B981
 ```
 
-### 1-2. 3인 면접관 시스템
+---
+
+## 1. 서비스 기능 우선순위
+
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#0A1628', 'primaryTextColor': '#fff', 'lineColor': '#00D9A3'}}}%%
 flowchart LR
-    subgraph Interviewers["3인 면접관 시스템"]
-        direction TB
-
-        subgraph HM["👨‍💼 채용담당자"]
-            HM1[직무 전문성 평가]
-            HM2[기술적 깊이 확인]
-            HM3[문제 해결력 검증]
-        end
-
-        subgraph HR["👩‍💼 HR담당자"]
-            HR1[문화 적합성 평가]
-            HR2[성장 잠재력 확인]
-            HR3[STAR 방법론 활용]
-        end
-
-        subgraph SP["👨‍🔬 현직자"]
-            SP1[협업 능력 평가]
-            SP2[일상 업무 호환성]
-            SP3[학습 태도 확인]
-        end
+    subgraph P1["🥇 1순위"]
+        A1(["🎭 멀티관점 AI면접"])
+        A2(["⚡ 실시간 스트리밍"])
+        A3(["🔍 RAG 맞춤질문"])
     end
 
-    subgraph Personalization["동적 개인화"]
-        P1[16가지 MBTI 성격 배정]
-        P2[세션별 랜덤 이름 부여]
-        P3[성격 기반 질문 스타일]
+    subgraph P2["🥈 2순위"]
+        B1(["📊 5축 역량평가"])
+        B2(["🎙️ 음성분석"])
     end
 
-    Interviewers --> Personalization
+    subgraph P3["🥉 3순위"]
+        C1(["📈 대시보드"])
+        C2(["📁 문서관리"])
+    end
+
+    P1 ==> P2 ==> P3
+
+    style P1 fill:#00D9A3,stroke:#00D9A3,color:#0A1628
+    style P2 fill:#6C63FF,stroke:#6C63FF,color:#fff
+    style P3 fill:#A8C5FF,stroke:#A8C5FF,color:#0A1628
+    style A1 fill:#0A1628,stroke:#00D9A3,color:#fff
+    style A2 fill:#0A1628,stroke:#00D9A3,color:#fff
+    style A3 fill:#0A1628,stroke:#00D9A3,color:#fff
+    style B1 fill:#1a2744,stroke:#6C63FF,color:#fff
+    style B2 fill:#1a2744,stroke:#6C63FF,color:#fff
+    style C1 fill:#f0f4ff,stroke:#A8C5FF,color:#0A1628
+    style C2 fill:#f0f4ff,stroke:#A8C5FF,color:#0A1628
 ```
 
-### 1-3. 실시간 스트리밍 파이프라인
+---
+
+## 2. 3인 면접관 시스템
+
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#0A1628', 'primaryTextColor': '#fff', 'lineColor': '#00D9A3'}}}%%
 flowchart LR
-    A[🎤 음성 입력] --> B[STT<br/>Whisper<br/>500-800ms]
-    B --> C[LLM<br/>GPT-4o<br/>800-1200ms]
-    C --> D[TTS<br/>OpenAI<br/>300-500ms]
-    D --> E[🔊 음성 출력]
+    CORE{{"🤖 IMSAM AI"}}
 
-    style A fill:#e1f5fe
-    style B fill:#fff3e0
-    style C fill:#f3e5f5
-    style D fill:#e8f5e9
-    style E fill:#e1f5fe
-```
-
-### 1-4. RAG 하이브리드 검색
-```mermaid
-flowchart TB
-    subgraph Input["문서 입력"]
-        D1[📄 이력서]
-        D2[💼 포트폴리오]
-        D3[✉️ 자기소개서]
-        D4[📋 채용공고 JD]
+    subgraph HM["👨‍💼 채용담당자"]
+        H1["직무전문성"]
+        H2["기술깊이"]
     end
 
-    subgraph Processing["문서 처리"]
-        P1[PDF 파싱<br/>LlamaParse]
-        P2[한국어 청킹<br/>800자 단위]
-        P3[임베딩 생성<br/>OpenAI]
+    subgraph HR["👩‍💼 HR담당자"]
+        R1["문화적합성"]
+        R2["성장잠재력"]
     end
 
-    subgraph Search["하이브리드 검색"]
-        S1[벡터 유사도 검색<br/>60% 가중치]
-        S2[BM25 전문 검색<br/>40% 가중치]
+    subgraph SP["👨‍🔬 현직자"]
+        S1["협업능력"]
+        S2["학습태도"]
     end
 
-    subgraph Rerank["재정렬"]
-        R1[Cohere Reranking<br/>+20-30% 정확도]
-    end
+    CORE --> HM & HR & SP
 
-    Input --> Processing --> Search --> Rerank --> Output[관련 컨텍스트]
+    M1(["🧠 16 MBTI"]) --> HM & HR & SP
+
+    style CORE fill:#00D9A3,stroke:#0A1628,color:#0A1628,stroke-width:3px
+    style HM fill:#0A1628,stroke:#6C63FF,color:#fff
+    style HR fill:#0A1628,stroke:#FF6B9D,color:#fff
+    style SP fill:#0A1628,stroke:#A8C5FF,color:#fff
+    style M1 fill:#0A1628,stroke:#00D9A3,color:#00D9A3
+    style H1 fill:#1a2744,stroke:#6C63FF,color:#fff
+    style H2 fill:#1a2744,stroke:#6C63FF,color:#fff
+    style R1 fill:#1a2744,stroke:#FF6B9D,color:#fff
+    style R2 fill:#1a2744,stroke:#FF6B9D,color:#fff
+    style S1 fill:#1a2744,stroke:#A8C5FF,color:#fff
+    style S2 fill:#1a2744,stroke:#A8C5FF,color:#fff
 ```
 
 ---
 
-## 2. 사용자 흐름 (User Flow)
+## 3. 실시간 스트리밍 파이프라인
 
-### 2-1. 메인 면접 플로우
 ```mermaid
-flowchart TD
-    Start([시작]) --> Login[로그인/회원가입]
-    Login --> Dashboard[대시보드 홈]
-
-    Dashboard --> History[히스토리 보기]
-    Dashboard --> Settings[설정]
-    Dashboard --> StartInterview[면접 시작]
-
-    StartInterview --> Setup[면접 설정 페이지]
-
-    subgraph SetupDetails["면접 설정"]
-        Setup --> S1[직무 유형 선택]
-        S1 --> S2[산업 분야 선택]
-        S2 --> S3[난이도 선택]
-        S3 --> S4[이력서 업로드<br/>선택사항]
-        S4 --> S5[포트폴리오 업로드<br/>선택사항]
-        S5 --> S6[JD 붙여넣기<br/>선택사항]
-        S6 --> S7[타이머 설정]
-    end
-
-    S7 --> Begin[면접 시작]
-
-    subgraph InterviewLoop["면접 진행 (최대 10턴)"]
-        Begin --> Record[🎤 음성 녹음]
-        Record --> STT[STT 변환]
-        STT --> LLM[LLM 질문 생성]
-        LLM --> TTS[TTS 음성 출력]
-        TTS --> Check{계속?}
-        Check -->|예| Record
-        Check -->|아니오| EndInterview
-    end
-
-    EndInterview[면접 종료] --> Analysis[분석 처리]
-
-    subgraph AnalysisDetails["분석"]
-        Analysis --> A1[5축 역량 계산]
-        A1 --> A2[합격/불합격 판정]
-        A2 --> A3[백분위 산출]
-        A3 --> A4[키워드 추출]
-    end
-
-    A4 --> Report[결과 리포트]
-
-    subgraph ReportDetails["리포트 내용"]
-        Report --> R1[종합 점수]
-        R1 --> R2[역량별 분석]
-        R2 --> R3[강점/개선점]
-        R3 --> R4[음성 분석 결과]
-    end
-
-    R4 --> End([종료])
-```
-
-### 2-2. 인증 플로우
-```mermaid
-flowchart TD
-    Start([시작]) --> LoginPage[로그인 페이지]
-
-    LoginPage --> Google[Google OAuth]
-    LoginPage --> Kakao[Kakao OAuth]
-    LoginPage --> Email[Email/Password]
-
-    Google --> AuthCheck{인증 성공?}
-    Kakao --> AuthCheck
-    Email --> AuthCheck
-
-    AuthCheck -->|실패| LoginPage
-    AuthCheck -->|성공| FirstLogin{최초 로그인?}
-
-    FirstLogin -->|예| Onboarding[온보딩]
-    FirstLogin -->|아니오| Dashboard[대시보드]
-
-    subgraph OnboardingSteps["온보딩 단계"]
-        Onboarding --> O1[이름 입력]
-        O1 --> O2[직무 선택]
-        O2 --> O3[산업 선택]
-    end
-
-    O3 --> Dashboard
-    Dashboard --> End([완료])
-```
-
-### 2-3. 면접 중 면접관 전환 로직
-```mermaid
-flowchart TD
-    Start([질문 시작]) --> CurrentQ[현재 면접관 질문]
-    CurrentQ --> UserAnswer[사용자 답변]
-    UserAnswer --> Evaluate[답변 평가]
-
-    Evaluate --> FollowUp{꼬리질문<br/>필요?}
-
-    FollowUp -->|예| CheckCount{꼬리질문<br/>3회 미만?}
-    CheckCount -->|예| Probability{55% 확률<br/>동일 면접관?}
-    CheckCount -->|아니오| Switch[면접관 교체]
-
-    Probability -->|예| SameInterviewer[동일 면접관<br/>꼬리질문]
-    Probability -->|아니오| Switch
-
-    FollowUp -->|아니오| Switch
-
-    SameInterviewer --> NextQ[다음 질문]
-    Switch --> SelectNext[다음 면접관 선택]
-    SelectNext --> NextQ
-
-    NextQ --> CheckTurn{10턴<br/>도달?}
-    CheckTurn -->|아니오| CurrentQ
-    CheckTurn -->|예| End([면접 종료])
-```
-
----
-
-## 3. 서비스 아키텍처
-
-### 3-1. 전체 시스템 아키텍처
-```mermaid
-flowchart TB
-    subgraph Client["👤 클라이언트"]
-        Web[Web Browser]
-        iOS[iOS App]
-        Android[Android App]
-    end
-
-    subgraph Frontend["Frontend Layer"]
-        Next[Next.js 16<br/>App Router]
-        React[React 18]
-        Tailwind[Tailwind CSS]
-        Radix[Radix UI]
-        Zustand[Zustand State]
-        SWR[SWR Fetching]
-        Capacitor[Capacitor<br/>Mobile Bridge]
-    end
-
-    subgraph Backend["Backend Layer - Vercel"]
-        subgraph APIs["API Routes"]
-            Interview[/interview<br/>start, message, end, stream]
-            RAG[/rag<br/>upload, evaluate]
-            Auth[/auth<br/>logout, delete]
-            STT[/stt<br/>Whisper]
-            TTS[/tts<br/>OpenAI]
-            Profile[/profile<br/>update]
-        end
-    end
-
-    subgraph AI["AI/ML Services"]
-        OpenAI[OpenAI APIs]
-        subgraph OpenAIServices["OpenAI"]
-            GPT4[GPT-4o<br/>LLM]
-            Whisper[Whisper<br/>STT]
-            TTSService[TTS-1<br/>TTS]
-            Embed[text-embedding-3-small<br/>Embeddings]
-        end
-        Cohere[Cohere<br/>Reranking]
-        LlamaParse[LlamaParse<br/>PDF Parsing]
-    end
-
-    subgraph Database["Database Layer"]
-        Supabase[(Supabase)]
-        subgraph SupabaseServices["Supabase Services"]
-            Postgres[(PostgreSQL)]
-            pgvector[pgvector<br/>Vector Search]
-            SupaAuth[Supabase Auth<br/>Google, Kakao]
-            RLS[Row Level Security]
-        end
-    end
-
-    subgraph Infra["Infrastructure"]
-        Vercel[Vercel<br/>Hosting]
-        Sentry[Sentry<br/>Error Tracking]
-        Clarity[Clarity<br/>Analytics]
-    end
-
-    Client --> Frontend
-    Frontend --> Backend
-    Backend --> AI
-    Backend --> Database
-    Backend --> Infra
-```
-
-### 3-2. 실시간 스트리밍 아키텍처
-```mermaid
-sequenceDiagram
-    participant C as Client
-    participant S as Server
-    participant STT as Whisper STT
-    participant LLM as GPT-4o
-    participant TTS as OpenAI TTS
-
-    C->>S: 음성 데이터 전송
-    S->>C: SSE 연결 시작
-
-    rect rgb(255, 243, 224)
-        S->>STT: 음성 변환 요청
-        S-->>C: stt_start 이벤트
-        STT-->>S: 텍스트 반환 (500-800ms)
-        S-->>C: stt_complete 이벤트
-    end
-
-    rect rgb(243, 229, 245)
-        S->>LLM: 질문 생성 요청
-        S-->>C: llm_start 이벤트
-        LLM-->>S: 스트리밍 응답 (800-1200ms)
-        S-->>C: llm_chunk 이벤트들
-        S-->>C: llm_complete 이벤트
-    end
-
-    rect rgb(232, 245, 233)
-        S->>TTS: 음성 합성 요청
-        S-->>C: tts_start 이벤트
-        TTS-->>S: 오디오 청크 (300-500ms first)
-        S-->>C: tts_chunk 이벤트들
-        S-->>C: tts_complete 이벤트
-    end
-
-    C->>C: 오디오 재생
-
-    Note over C,TTS: 총 지연 시간: ~2.5초
-```
-
-### 3-3. RAG 파이프라인 아키텍처
-```mermaid
-flowchart TB
-    subgraph Upload["문서 업로드"]
-        U1[사용자 문서 업로드]
-        U2{복잡한 PDF?}
-        U1 --> U2
-        U2 -->|예| LP[LlamaParse<br/>5-10초]
-        U2 -->|아니오| Basic[pdf-parse<br/>1초 이내]
-    end
-
-    subgraph Process["문서 처리"]
-        LP --> Chunk[한국어 시맨틱 청킹<br/>800자, 100자 오버랩]
-        Basic --> Chunk
-        Chunk --> Embed[OpenAI Embedding<br/>1536 dimensions]
-    end
-
-    subgraph Store["저장"]
-        Embed --> Vector[(pgvector<br/>벡터 저장)]
-        Embed --> BM25[(PostgreSQL<br/>GIN Index)]
-    end
-
-    subgraph Search["검색 시점"]
-        Query[질문/컨텍스트] --> Hybrid{하이브리드 검색}
-        Vector --> Hybrid
-        BM25 --> Hybrid
-        Hybrid --> Combine[결과 결합<br/>Vector 60% + BM25 40%]
-        Combine --> Rerank[Cohere Reranking<br/>선택적]
-        Rerank --> Results[Top-K 결과]
-    end
-
-    Results --> LLM[LLM 컨텍스트로 전달]
-```
-
----
-
-## 4. 데이터 모델 (ERD)
-
-### 4-1. 전체 ERD
-```mermaid
-erDiagram
-    profiles ||--o{ interview_sessions : "creates"
-    profiles ||--o{ documents : "uploads"
-    interview_sessions ||--o{ messages : "contains"
-    interview_sessions ||--|| interview_results : "generates"
-    interview_results ||--o| speech_analytics : "has"
-    interview_results ||--o| emotion_analyses : "has"
-    documents }o--o| interview_sessions : "referenced_by"
-
-    profiles {
-        uuid id PK
-        string name
-        string avatar_url
-        string job_type
-        string industry
-        string tier
-        timestamp created_at
-        timestamp updated_at
-    }
-
-    documents {
-        uuid id PK
-        uuid user_id FK
-        string type
-        string filename
-        text content
-        vector embedding
-        tsvector content_tsv
-        jsonb metadata
-        timestamp created_at
-    }
-
-    interview_sessions {
-        uuid id PK
-        uuid user_id FK
-        string job_type
-        string industry
-        string difficulty
-        uuid resume_doc_id FK
-        uuid portfolio_doc_id FK
-        string status
-        int turn_count
-        int max_turns
-        jsonb timer_config
-        jsonb interviewer_mbti
-        text jd_text
-        timestamp created_at
-    }
-
-    messages {
-        uuid id PK
-        uuid session_id FK
-        string role
-        string interviewer_id
-        text content
-        jsonb structured_response
-        string audio_url
-        int latency_ms
-        timestamp created_at
-    }
-
-    interview_results {
-        uuid id PK
-        uuid session_id FK
-        uuid user_id FK
-        float overall_score
-        string pass_status
-        jsonb interviewer_scores
-        jsonb competency_scores
-        float rank_percentile
-        float growth_index
-        text feedback_summary
-        array strengths
-        array improvements
-        timestamp created_at
-    }
-
-    speech_analytics {
-        uuid id PK
-        uuid result_id FK
-        float words_per_minute
-        jsonb filler_words
-        jsonb silence_patterns
-        float articulation_score
-    }
-
-    emotion_analyses {
-        uuid id PK
-        uuid result_id FK
-        jsonb timeline
-        jsonb average_scores
-    }
-
-    questions {
-        uuid id PK
-        string category
-        string job_type
-        string industry
-        string difficulty
-        text question_text
-        array evaluation_points
-        text sample_answer
-        array follow_ups
-    }
-```
-
-### 4-2. 핵심 테이블 관계
-```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#0A1628', 'primaryTextColor': '#fff', 'lineColor': '#00D9A3'}}}%%
 flowchart LR
-    subgraph User["사용자 데이터"]
-        P[profiles]
-        D[documents]
-    end
+    A(["🎤 음성입력"]) ==>|오디오| B["<b>STT</b><br/>Whisper<br/>500-800ms"]
+    B ==>|텍스트| C["<b>LLM</b><br/>GPT-4o<br/>800-1200ms"]
+    C ==>|응답| D["<b>TTS</b><br/>OpenAI<br/>300-500ms"]
+    D ==>|오디오| E(["🔊 음성출력"])
 
-    subgraph Interview["면접 데이터"]
-        S[interview_sessions]
-        M[messages]
-    end
+    L(["⚡ E2E ~2.5초"])
 
-    subgraph Results["결과 데이터"]
-        R[interview_results]
-        SA[speech_analytics]
-        EA[emotion_analyses]
-    end
-
-    P -->|1:N| D
-    P -->|1:N| S
-    S -->|1:N| M
-    S -->|1:1| R
-    R -->|1:1| SA
-    R -->|1:1| EA
-    D -.->|참조| S
+    style A fill:#A8C5FF,stroke:#0A1628,color:#0A1628,stroke-width:2px
+    style B fill:#0A1628,stroke:#F59E0B,color:#F59E0B,stroke-width:2px
+    style C fill:#0A1628,stroke:#6C63FF,color:#6C63FF,stroke-width:2px
+    style D fill:#0A1628,stroke:#10B981,color:#10B981,stroke-width:2px
+    style E fill:#00D9A3,stroke:#0A1628,color:#0A1628,stroke-width:2px
+    style L fill:#FF6B9D,stroke:#FF6B9D,color:#fff,stroke-width:2px
 ```
 
 ---
 
-## 5. 데이터 흐름도
+## 4. RAG 하이브리드 검색
 
-### 5-1. 전체 데이터 흐름
 ```mermaid
-flowchart TB
-    subgraph Input["사용자 입력"]
-        I1[🎤 음성]
-        I2[📝 텍스트]
-        I3[📄 문서]
-    end
-
-    subgraph STTProcess["음성 처리"]
-        I1 --> Whisper[Whisper STT]
-        Whisper --> Text1[텍스트 변환]
-    end
-
-    subgraph DocProcess["문서 처리"]
-        I3 --> Parser[PDF Parser]
-        Parser --> Chunker[한국어 청킹]
-        Chunker --> Embedder[임베딩 생성]
-    end
-
-    subgraph Storage["저장소"]
-        Embedder --> VectorDB[(Vector DB)]
-        Embedder --> TextDB[(Text DB)]
-    end
-
-    subgraph Search["검색"]
-        VectorDB --> HybridSearch[하이브리드 검색]
-        TextDB --> HybridSearch
-        HybridSearch --> Context[관련 컨텍스트]
-    end
-
-    subgraph LLMProcess["LLM 처리"]
-        Text1 --> LLM[GPT-4o]
-        I2 --> LLM
-        Context --> LLM
-        SystemPrompt[시스템 프롬프트] --> LLM
-        History[대화 히스토리] --> LLM
-    end
-
-    subgraph Output["출력"]
-        LLM --> Question[다음 질문]
-        LLM --> Evaluation[평가 점수]
-        Question --> TTS[TTS 합성]
-        TTS --> Audio[🔊 음성 출력]
-    end
-
-    subgraph Save["저장"]
-        Question --> MessagesDB[(messages)]
-        Evaluation --> ResultsDB[(results)]
-    end
-```
-
-### 5-2. 면접 세션 데이터 흐름
-```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#0A1628', 'primaryTextColor': '#fff', 'lineColor': '#00D9A3'}}}%%
 flowchart LR
-    subgraph Start["면접 시작"]
-        S1[세션 생성]
-        S2[MBTI 배정]
-        S3[첫 질문 생성]
+    subgraph DOCS["📄 문서"]
+        D1(["이력서"])
+        D2(["포트폴리오"])
+        D3(["JD"])
     end
 
-    subgraph Loop["면접 루프"]
-        L1[사용자 답변]
-        L2[답변 평가]
-        L3[다음 질문 생성]
-        L4[메시지 저장]
+    subgraph PROC["⚙️ 처리"]
+        P1["PDF파싱"]
+        P2["청킹"]
+        P3["임베딩"]
     end
 
-    subgraph End["면접 종료"]
-        E1[전체 평가 계산]
-        E2[5축 점수 산출]
-        E3[합격 여부 판정]
-        E4[리포트 생성]
+    subgraph SEARCH["🔍 검색"]
+        S1[("Vector 60%")]
+        S2[("BM25 40%")]
     end
 
-    Start --> Loop
-    L1 --> L2 --> L3 --> L4 --> L1
-    Loop --> End
+    R1{{"Rerank"}}
+    O1(["✨ 컨텍스트"])
+
+    DOCS --> PROC --> SEARCH --> R1 --> O1
+
+    style DOCS fill:#A8C5FF,stroke:#A8C5FF,color:#0A1628
+    style PROC fill:#0A1628,stroke:#6C63FF,color:#fff
+    style SEARCH fill:#0A1628,stroke:#00D9A3,color:#fff
+    style R1 fill:#6C63FF,stroke:#6C63FF,color:#fff
+    style O1 fill:#00D9A3,stroke:#0A1628,color:#0A1628
+    style D1 fill:#0A1628,stroke:#A8C5FF,color:#A8C5FF
+    style D2 fill:#0A1628,stroke:#A8C5FF,color:#A8C5FF
+    style D3 fill:#0A1628,stroke:#A8C5FF,color:#A8C5FF
+    style S1 fill:#00D9A3,stroke:#0A1628,color:#0A1628
+    style S2 fill:#A8C5FF,stroke:#0A1628,color:#0A1628
 ```
 
 ---
 
-## 6. 시스템 프롬프트 구조
+## 5. 사용자 플로우 (메인)
 
-### 6-1. 프롬프트 구성 요소
 ```mermaid
-flowchart TB
-    subgraph Base["기본 페르소나"]
-        B1["당신은 {industry} 분야<br/>{job_type} 채용 면접의<br/>{role} '{name}'입니다"]
-        B2["성격 유형: {mbti}<br/>{mbti_style}"]
-    end
-
-    subgraph Role["역할별 설정"]
-        R1["채용담당자<br/>직무 전문성 평가"]
-        R2["HR담당자<br/>문화 적합성 평가"]
-        R3["현직자<br/>협업 적합성 평가"]
-    end
-
-    subgraph Context["컨텍스트 주입"]
-        C1["이력서 컨텍스트<br/>{resume_context}"]
-        C2["포트폴리오 컨텍스트<br/>{portfolio_context}"]
-        C3["채용공고 JD<br/>{job_description}"]
-        C4["이전 면접 키워드<br/>{user_keywords}"]
-    end
-
-    subgraph Rules["행동 지침"]
-        RU1["질문 반복 금지"]
-        RU2["답변 에코 금지"]
-        RU3["JSON 구조화 출력"]
-        RU4["STAR/PREP 평가"]
-    end
-
-    subgraph Output["출력 스키마"]
-        O1["question: 질문 텍스트"]
-        O2["evaluation: 평가 점수"]
-        O3["inner_thought: 내부 평가"]
-        O4["follow_up_intent: 꼬리질문 여부"]
-    end
-
-    Base --> Role --> Context --> Rules --> Output
-```
-
-### 6-2. MBTI 성격 스타일 영향
-```mermaid
-mindmap
-    root((MBTI 성격))
-        분석형
-            INTJ
-                전략적 접근
-                논리적 질문
-            INTP
-                호기심 기반
-                깊이있는 탐구
-        외향형
-            ENFP
-                열정적 대화
-                창의적 질문
-            ENTJ
-                직접적 스타일
-                목표 지향
-        감정형
-            INFJ
-                통찰력 있는
-                깊이있는 이해
-            ISFJ
-                배려하는
-                세심한 관찰
-        실용형
-            ESTJ
-                체계적
-                효율 중시
-            ISTP
-                실무 중심
-                간결한 표현
-```
-
----
-
-## 7. 5축 역량 평가 체계
-
-### 7-1. 평가 카테고리
-```mermaid
-pie title 5축 역량 평가 가중치
-    "직무 전문성" : 30
-    "논리적 구조" : 20
-    "태도/커뮤니케이션" : 20
-    "회사 적합성" : 15
-    "성장 잠재력" : 15
-```
-
-### 7-2. 평가 프로세스
-```mermaid
-flowchart TB
-    subgraph Scoring["점수 산출"]
-        S1[각 답변별 5축 평가<br/>1-5점 척도]
-        S2[면접관별 가중 평균]
-        S3[전체 종합 점수]
-    end
-
-    subgraph Categories["5대 평가 축"]
-        C1["논리적 구조 20%<br/>STAR/PREP 준수"]
-        C2["직무 전문성 30%<br/>기술적 깊이"]
-        C3["태도/커뮤니케이션 20%<br/>명확성, 자신감"]
-        C4["회사 적합성 15%<br/>문화적 정렬"]
-        C5["성장 잠재력 15%<br/>학습 마인드셋"]
-    end
-
-    subgraph Result["결과 판정"]
-        R1{종합 점수}
-        R1 -->|80점 이상| Pass[✅ 합격]
-        R1 -->|60-79점| Border[⚠️ 보류]
-        R1 -->|60점 미만| Fail[❌ 불합격]
-    end
-
-    S1 --> S2 --> S3
-    Categories --> S1
-    S3 --> Result
-```
-
-### 7-3. 5단계 평가 척도
-```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#0A1628', 'primaryTextColor': '#fff', 'lineColor': '#00D9A3'}}}%%
 flowchart LR
-    subgraph Scale["5단계 평가 척도"]
-        L1["1점<br/>미흡"]
-        L2["2점<br/>부족"]
-        L3["3점<br/>보통"]
-        L4["4점<br/>우수"]
-        L5["5점<br/>탁월"]
+    subgraph STEP1["Step 1"]
+        S1(["🔐<br/>로그인"])
     end
 
-    L1 --> L2 --> L3 --> L4 --> L5
+    subgraph STEP2["Step 2"]
+        S2(["⚙️<br/>면접설정"])
+    end
 
-    style L1 fill:#ffcdd2
-    style L2 fill:#ffe0b2
-    style L3 fill:#fff9c4
-    style L4 fill:#c8e6c9
-    style L5 fill:#a5d6a7
+    subgraph STEP3["Step 3"]
+        S3(["🎤<br/>면접진행"])
+    end
+
+    subgraph STEP4["Step 4"]
+        S4(["📊<br/>분석"])
+    end
+
+    subgraph STEP5["Step 5"]
+        S5(["📈<br/>리포트"])
+    end
+
+    STEP1 ==> STEP2 ==> STEP3 ==> STEP4 ==> STEP5
+
+    style STEP1 fill:#A8C5FF,stroke:#A8C5FF,color:#0A1628
+    style STEP2 fill:#F59E0B,stroke:#F59E0B,color:#fff
+    style STEP3 fill:#6C63FF,stroke:#6C63FF,color:#fff
+    style STEP4 fill:#FF6B9D,stroke:#FF6B9D,color:#fff
+    style STEP5 fill:#00D9A3,stroke:#00D9A3,color:#0A1628
+    style S1 fill:#0A1628,stroke:#A8C5FF,color:#A8C5FF
+    style S2 fill:#0A1628,stroke:#F59E0B,color:#F59E0B
+    style S3 fill:#0A1628,stroke:#6C63FF,color:#6C63FF
+    style S4 fill:#0A1628,stroke:#FF6B9D,color:#FF6B9D
+    style S5 fill:#0A1628,stroke:#00D9A3,color:#00D9A3
 ```
 
 ---
 
-## 8. 기술 스택
+## 6. 면접 설정 상세
 
-### 8-1. 기술 스택 레이어
 ```mermaid
-flowchart TB
-    subgraph Frontend["🎨 Frontend"]
-        F1[Next.js 16]
-        F2[React 18]
-        F3[TypeScript 5.3]
-        F4[Tailwind CSS 3.4]
-        F5[Radix UI]
-        F6[Zustand 5.0]
-        F7[SWR 2.2]
-        F8[Capacitor 8.0]
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#0A1628', 'primaryTextColor': '#fff', 'lineColor': '#00D9A3'}}}%%
+flowchart LR
+    A["📋<br/>직무선택"] --> B["🏢<br/>산업선택"] --> C["📊<br/>난이도"] --> D["📄<br/>문서업로드"] --> E["📝<br/>JD입력"] --> F(["🚀<br/>시작"])
+
+    style A fill:#0A1628,stroke:#6C63FF,color:#6C63FF
+    style B fill:#0A1628,stroke:#6C63FF,color:#6C63FF
+    style C fill:#0A1628,stroke:#6C63FF,color:#6C63FF
+    style D fill:#0A1628,stroke:#A8C5FF,color:#A8C5FF
+    style E fill:#0A1628,stroke:#A8C5FF,color:#A8C5FF
+    style F fill:#00D9A3,stroke:#00D9A3,color:#0A1628,stroke-width:3px
+```
+
+---
+
+## 7. 면접 진행 루프
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#0A1628', 'primaryTextColor': '#fff', 'lineColor': '#00D9A3'}}}%%
+flowchart LR
+    A(["🎤 녹음"]) --> B["🔄 STT"] --> C["🤖 LLM"] --> D["🔊 TTS"] --> E{{"다음?"}}
+    E -->|"계속"| A
+    E -->|"종료"| F(["📊 결과"])
+
+    style A fill:#A8C5FF,stroke:#0A1628,color:#0A1628
+    style B fill:#0A1628,stroke:#F59E0B,color:#F59E0B
+    style C fill:#0A1628,stroke:#6C63FF,color:#6C63FF
+    style D fill:#0A1628,stroke:#10B981,color:#10B981
+    style E fill:#FF6B9D,stroke:#FF6B9D,color:#fff
+    style F fill:#00D9A3,stroke:#0A1628,color:#0A1628
+```
+
+---
+
+## 8. 시스템 아키텍처
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#0A1628', 'primaryTextColor': '#fff', 'lineColor': '#00D9A3'}}}%%
+flowchart LR
+    subgraph CLIENT["👤 Client"]
+        C1(["Web"])
+        C2(["iOS"])
+        C3(["Android"])
     end
 
-    subgraph Backend["⚙️ Backend"]
-        B1[Next.js App Router]
-        B2[REST APIs]
-        B3[SSE Streaming]
-        B4[Vercel Serverless]
+    subgraph FRONT["🎨 Frontend"]
+        F1["Next.js"]
+        F2["React"]
+    end
+
+    subgraph BACK["⚙️ Backend"]
+        B1["/interview"]
+        B2["/rag"]
+    end
+
+    subgraph AI["🤖 AI"]
+        A1["GPT-4o"]
+        A2["Whisper"]
+        A3["TTS"]
+    end
+
+    subgraph DB["🗄️ DB"]
+        D1[("Supabase")]
+    end
+
+    CLIENT --> FRONT --> BACK --> AI --> DB
+
+    style CLIENT fill:#A8C5FF,stroke:#A8C5FF,color:#0A1628
+    style FRONT fill:#00D9A3,stroke:#00D9A3,color:#0A1628
+    style BACK fill:#6C63FF,stroke:#6C63FF,color:#fff
+    style AI fill:#FF6B9D,stroke:#FF6B9D,color:#fff
+    style DB fill:#0A1628,stroke:#00D9A3,color:#fff
+    style D1 fill:#00D9A3,stroke:#0A1628,color:#0A1628
+```
+
+---
+
+## 9. 5축 역량 평가
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#0A1628', 'primaryTextColor': '#fff', 'lineColor': '#00D9A3'}}}%%
+flowchart LR
+    subgraph AXIS["📊 5축 평가"]
+        A1["직무전문성<br/><b>30%</b>"]
+        A2["논리구조<br/><b>20%</b>"]
+        A3["커뮤니케이션<br/><b>20%</b>"]
+        A4["회사적합성<br/><b>15%</b>"]
+        A5["성장잠재력<br/><b>15%</b>"]
+    end
+
+    R{{"종합점수"}}
+
+    subgraph RESULT["판정"]
+        P(["✅ 합격"])
+        H(["⚠️ 보류"])
+        F(["❌ 불합격"])
+    end
+
+    AXIS --> R --> RESULT
+
+    style AXIS fill:#0A1628,stroke:#6C63FF,color:#fff
+    style A1 fill:#6C63FF,stroke:#6C63FF,color:#fff
+    style A2 fill:#6C63FF,stroke:#6C63FF,color:#fff
+    style A3 fill:#6C63FF,stroke:#6C63FF,color:#fff
+    style A4 fill:#6C63FF,stroke:#6C63FF,color:#fff
+    style A5 fill:#6C63FF,stroke:#6C63FF,color:#fff
+    style R fill:#0A1628,stroke:#00D9A3,color:#00D9A3
+    style RESULT fill:#1a2744,stroke:#A8C5FF,color:#fff
+    style P fill:#10B981,stroke:#10B981,color:#fff
+    style H fill:#F59E0B,stroke:#F59E0B,color:#fff
+    style F fill:#EF4444,stroke:#EF4444,color:#fff
+```
+
+---
+
+## 10. 음성 분석
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#0A1628', 'primaryTextColor': '#fff', 'lineColor': '#00D9A3'}}}%%
+flowchart LR
+    IN(["🎤 음성"]) --> A["📈 WPM<br/>120-180"] & B["🗣️ 추임새<br/>15종류"] & C["⏸️ 침묵<br/>>2초"] & D["💯 자신감<br/>0-100"]
+    A & B & C & D --> OUT(["📊 리포트"])
+
+    style IN fill:#A8C5FF,stroke:#0A1628,color:#0A1628
+    style A fill:#0A1628,stroke:#00D9A3,color:#00D9A3
+    style B fill:#0A1628,stroke:#FF6B9D,color:#FF6B9D
+    style C fill:#0A1628,stroke:#F59E0B,color:#F59E0B
+    style D fill:#0A1628,stroke:#6C63FF,color:#6C63FF
+    style OUT fill:#00D9A3,stroke:#0A1628,color:#0A1628
+```
+
+---
+
+## 11. 기술 스택
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#0A1628', 'primaryTextColor': '#fff', 'lineColor': '#00D9A3'}}}%%
+flowchart LR
+    subgraph FE["🎨 Frontend"]
+        F1(["Next.js 16"])
+        F2(["React 18"])
+        F3(["Tailwind"])
+        F4(["Capacitor"])
     end
 
     subgraph AI["🤖 AI/ML"]
-        A1[GPT-4o - LLM]
-        A2[Whisper - STT]
-        A3[TTS-1 - TTS]
-        A4[text-embedding-3-small]
-        A5[Cohere Reranking]
-        A6[LlamaParse PDF]
+        A1(["GPT-4o"])
+        A2(["Whisper"])
+        A3(["TTS-1"])
+        A4(["Embeddings"])
     end
 
-    subgraph Database["🗄️ Database"]
-        D1[Supabase PostgreSQL]
-        D2[pgvector]
-        D3[Supabase Auth]
-        D4[Row Level Security]
+    subgraph DB["🗄️ Database"]
+        D1(["PostgreSQL"])
+        D2(["pgvector"])
+        D3(["Supabase"])
     end
 
-    subgraph Infra["☁️ Infrastructure"]
-        I1[Vercel Hosting]
-        I2[Sentry Monitoring]
-        I3[Clarity Analytics]
-    end
+    FE --> AI --> DB
 
-    Frontend --> Backend
-    Backend --> AI
-    Backend --> Database
-    Backend --> Infra
+    style FE fill:#00D9A3,stroke:#00D9A3,color:#0A1628
+    style AI fill:#FF6B9D,stroke:#FF6B9D,color:#fff
+    style DB fill:#0A1628,stroke:#00D9A3,color:#fff
+    style F1 fill:#0A1628,stroke:#00D9A3,color:#00D9A3
+    style F2 fill:#0A1628,stroke:#00D9A3,color:#00D9A3
+    style F3 fill:#0A1628,stroke:#00D9A3,color:#00D9A3
+    style F4 fill:#0A1628,stroke:#00D9A3,color:#00D9A3
+    style A1 fill:#0A1628,stroke:#FF6B9D,color:#FF6B9D
+    style A2 fill:#0A1628,stroke:#FF6B9D,color:#FF6B9D
+    style A3 fill:#0A1628,stroke:#FF6B9D,color:#FF6B9D
+    style A4 fill:#0A1628,stroke:#FF6B9D,color:#FF6B9D
+    style D1 fill:#1a2744,stroke:#A8C5FF,color:#A8C5FF
+    style D2 fill:#1a2744,stroke:#A8C5FF,color:#A8C5FF
+    style D3 fill:#1a2744,stroke:#A8C5FF,color:#A8C5FF
 ```
 
-### 8-2. 인증 시스템
+---
+
+## 12. 인증 플로우
+
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#0A1628', 'primaryTextColor': '#fff', 'lineColor': '#00D9A3'}}}%%
 flowchart LR
-    subgraph Providers["OAuth Providers"]
-        G[Google]
-        K[Kakao]
-        E[Email/Password]
+    START(("🚀")) --> AUTH
+
+    subgraph AUTH["🔐 OAuth"]
+        G["Google"]
+        K["Kakao"]
+        E["Email"]
     end
 
-    subgraph Auth["Supabase Auth"]
-        JWT[JWT Token]
-        Session[Session Management]
+    AUTH --> CHECK{{"인증?"}} -->|성공| ONBOARD
+
+    subgraph ONBOARD["👤 온보딩"]
+        O1["이름"]
+        O2["직무"]
+        O3["산업"]
     end
 
-    subgraph Security["보안"]
-        RLS[Row Level Security]
-        Encrypt[데이터 암호화]
-    end
+    ONBOARD --> DASH(["📊 대시보드"])
 
-    Providers --> Auth --> Security
+    style START fill:#00D9A3,stroke:#00D9A3,color:#0A1628
+    style AUTH fill:#0A1628,stroke:#A8C5FF,color:#fff
+    style G fill:#4285F4,stroke:#4285F4,color:#fff
+    style K fill:#FEE500,stroke:#FEE500,color:#000
+    style E fill:#1a2744,stroke:#A8C5FF,color:#A8C5FF
+    style CHECK fill:#F59E0B,stroke:#F59E0B,color:#fff
+    style ONBOARD fill:#0A1628,stroke:#6C63FF,color:#fff
+    style O1 fill:#1a2744,stroke:#6C63FF,color:#fff
+    style O2 fill:#1a2744,stroke:#6C63FF,color:#fff
+    style O3 fill:#1a2744,stroke:#6C63FF,color:#fff
+    style DASH fill:#00D9A3,stroke:#00D9A3,color:#0A1628
 ```
 
 ---
 
-## 9. 성능 지표
+## 13. 데이터 흐름
 
-### 9-1. 지연 시간 목표
 ```mermaid
-gantt
-    title 스트리밍 지연 시간 (ms)
-    dateFormat X
-    axisFormat %s
-
-    section STT
-    Whisper    :0, 800
-
-    section LLM
-    GPT-4o     :800, 2000
-
-    section TTS
-    First Chunk :2000, 2500
-
-    section Total
-    E2E Target :milestone, 2500, 0
-```
-
-### 9-2. RAG 성능
-```mermaid
-xychart-beta
-    title "RAG 검색 성능 비교"
-    x-axis ["Vector Only", "Hybrid", "Hybrid+Rerank"]
-    y-axis "응답시간 (ms)" 0 --> 700
-    bar [175, 250, 500]
-```
-
----
-
-## 10. 보안 아키텍처
-
-### 10-1. 보안 레이어
-```mermaid
-flowchart TB
-    subgraph Client["클라이언트"]
-        HTTPS[HTTPS Only]
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#0A1628', 'primaryTextColor': '#fff', 'lineColor': '#00D9A3'}}}%%
+flowchart LR
+    subgraph IN["📥 입력"]
+        I1(["🎤 음성"])
+        I2(["📄 문서"])
     end
 
-    subgraph API["API Layer"]
-        RateLimit[Rate Limiting<br/>20 req/60s]
-        Validation[Input Validation]
-        XSS[XSS Protection]
+    subgraph PROC["⚙️ 처리"]
+        P1["STT"]
+        P2["임베딩"]
     end
 
-    subgraph Auth["인증"]
-        JWT[JWT Tokens]
-        OAuth[OAuth 2.0]
+    subgraph STORE["🗄️ DB"]
+        S1[("Vector")]
+        S2[("Text")]
     end
 
-    subgraph Data["데이터"]
-        RLS[Row Level Security]
-        Encrypt[필드 암호화]
+    LLM["🤖 GPT-4o"]
+
+    subgraph OUT["📤 출력"]
+        O1(["🔊 음성"])
+        O2(["📊 점수"])
     end
 
-    subgraph Headers["보안 헤더"]
-        H1[X-Frame-Options: DENY]
-        H2[X-Content-Type-Options: nosniff]
-        H3[X-XSS-Protection: 1]
-    end
+    IN --> PROC --> STORE --> LLM --> OUT
 
-    Client --> API --> Auth --> Data
-    API --> Headers
+    style IN fill:#A8C5FF,stroke:#A8C5FF,color:#0A1628
+    style PROC fill:#6C63FF,stroke:#6C63FF,color:#fff
+    style STORE fill:#0A1628,stroke:#00D9A3,color:#fff
+    style LLM fill:#FF6B9D,stroke:#FF6B9D,color:#fff
+    style OUT fill:#00D9A3,stroke:#00D9A3,color:#0A1628
+    style S1 fill:#00D9A3,stroke:#0A1628,color:#0A1628
+    style S2 fill:#A8C5FF,stroke:#0A1628,color:#0A1628
 ```
 
 ---
 
-*문서 생성일: 2025년*
-*프로젝트: IMSAM AI Interview Service*
-*Production URL: https://interview.sday.me*
+## 14. 시스템 프롬프트 구조
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#0A1628', 'primaryTextColor': '#fff', 'lineColor': '#00D9A3'}}}%%
+flowchart LR
+    subgraph BASE["🎭 페르소나"]
+        B1["역할"]
+        B2["MBTI"]
+        B3["이름"]
+    end
+
+    subgraph CTX["📄 컨텍스트"]
+        C1["이력서"]
+        C2["포트폴리오"]
+        C3["JD"]
+    end
+
+    subgraph RULE["📋 규칙"]
+        R1["반복금지"]
+        R2["JSON출력"]
+        R3["STAR평가"]
+    end
+
+    subgraph OUT["📤 출력"]
+        O1["question"]
+        O2["evaluation"]
+        O3["follow_up"]
+    end
+
+    BASE --> CTX --> RULE --> OUT
+
+    style BASE fill:#6C63FF,stroke:#6C63FF,color:#fff
+    style CTX fill:#FF6B9D,stroke:#FF6B9D,color:#fff
+    style RULE fill:#F59E0B,stroke:#F59E0B,color:#fff
+    style OUT fill:#00D9A3,stroke:#00D9A3,color:#0A1628
+    style B1 fill:#1a2744,stroke:#6C63FF,color:#fff
+    style B2 fill:#1a2744,stroke:#6C63FF,color:#fff
+    style B3 fill:#1a2744,stroke:#6C63FF,color:#fff
+    style C1 fill:#1a2744,stroke:#FF6B9D,color:#fff
+    style C2 fill:#1a2744,stroke:#FF6B9D,color:#fff
+    style C3 fill:#1a2744,stroke:#FF6B9D,color:#fff
+    style R1 fill:#1a2744,stroke:#F59E0B,color:#fff
+    style R2 fill:#1a2744,stroke:#F59E0B,color:#fff
+    style R3 fill:#1a2744,stroke:#F59E0B,color:#fff
+    style O1 fill:#0A1628,stroke:#00D9A3,color:#00D9A3
+    style O2 fill:#0A1628,stroke:#00D9A3,color:#00D9A3
+    style O3 fill:#0A1628,stroke:#00D9A3,color:#00D9A3
+```
+
+---
+
+## 15. ERD (간소화)
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#0A1628', 'lineColor': '#00D9A3'}}}%%
+flowchart LR
+    P[("👤<br/>profiles")] --> S[("🎤<br/>sessions")] --> M[("💬<br/>messages")]
+    S --> R[("📊<br/>results")] --> SP[("🎙️<br/>speech")]
+    P --> D[("📄<br/>documents")]
+    D -.-> S
+
+    style P fill:#6C63FF,stroke:#6C63FF,color:#fff
+    style S fill:#FF6B9D,stroke:#FF6B9D,color:#fff
+    style M fill:#F59E0B,stroke:#F59E0B,color:#fff
+    style R fill:#00D9A3,stroke:#00D9A3,color:#0A1628
+    style SP fill:#A8C5FF,stroke:#A8C5FF,color:#0A1628
+    style D fill:#0A1628,stroke:#A8C5FF,color:#A8C5FF
+```
+
+---
+
+## 📋 사용 가이드
+
+### Mermaid to Figma 사용법
+
+1. 코드 블록 복사 (` ```mermaid ` 와 ` ``` ` 제외)
+2. Figma 플러그인 실행 → 코드 붙여넣기 → Generate
+3. 필요시 추가 스타일링
+
+### 색상 변경
+
+```
+#00D9A3 → Mint      #0A1628 → Navy
+#6C63FF → Purple    #FF6B9D → Pink
+#A8C5FF → Blue      #10B981 → Green
+```
+
+---
+
+*문서 생성일: 2025년 | IMSAM AI Interview*
