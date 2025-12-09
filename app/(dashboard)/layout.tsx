@@ -48,45 +48,42 @@ export default function DashboardLayout({
 
     const fetchUser = async () => {
       try {
-        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+        // 1. 먼저 캐시된 세션 확인 (빠름)
+        const { data: { session } } = await supabase.auth.getSession();
 
-        if (authError) {
-          console.error('Auth error in layout:', authError);
-          return;
+        if (session?.user && isMounted) {
+          // 즉시 기본 정보로 UI 업데이트
+          setUser({
+            id: session.user.id,
+            email: session.user.email || "",
+            full_name: session.user.user_metadata?.full_name,
+          });
         }
 
-        if (authUser && isMounted) {
-          // Get profile data with timeout
+        // 2. 백그라운드에서 프로필 정보 가져오기 (3초 타임아웃)
+        if (session?.user) {
           const profilePromise = supabase
             .from("profiles")
             .select("full_name")
-            .eq("id", authUser.id)
+            .eq("id", session.user.id)
             .single();
 
           const timeoutPromise = new Promise<never>((_, reject) => {
-            setTimeout(() => reject(new Error('Profile fetch timeout')), 10000);
+            setTimeout(() => reject(new Error('Profile fetch timeout')), 3000);
           });
 
           try {
             const { data: profile } = await Promise.race([profilePromise, timeoutPromise]) as { data: { full_name?: string } | null };
 
-            if (isMounted) {
-              setUser({
-                id: authUser.id,
-                email: authUser.email || "",
-                full_name: profile?.full_name || authUser.user_metadata?.full_name,
-              });
+            if (isMounted && profile?.full_name) {
+              setUser(prev => prev ? {
+                ...prev,
+                full_name: profile.full_name,
+              } : null);
             }
           } catch (profileError) {
-            console.error('Profile fetch error:', profileError);
-            // Still set user with basic info even if profile fetch fails
-            if (isMounted) {
-              setUser({
-                id: authUser.id,
-                email: authUser.email || "",
-                full_name: authUser.user_metadata?.full_name,
-              });
-            }
+            // 프로필 로드 실패해도 무시 - 이미 기본 정보는 표시됨
+            console.log('Profile fetch skipped:', profileError);
           }
         }
       } catch (error) {
@@ -98,37 +95,19 @@ export default function DashboardLayout({
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         if (!isMounted) return;
 
         if (event === "SIGNED_OUT") {
           setUser(null);
           window.location.href = "/login";
         } else if (session?.user) {
-          try {
-            const { data: profile } = await supabase
-              .from("profiles")
-              .select("full_name")
-              .eq("id", session.user.id)
-              .single() as { data: { full_name?: string } | null };
-
-            if (isMounted) {
-              setUser({
-                id: session.user.id,
-                email: session.user.email || "",
-                full_name: profile?.full_name || session.user.user_metadata?.full_name,
-              });
-            }
-          } catch (error) {
-            console.error('Profile fetch error on auth change:', error);
-            if (isMounted) {
-              setUser({
-                id: session.user.id,
-                email: session.user.email || "",
-                full_name: session.user.user_metadata?.full_name,
-              });
-            }
-          }
+          // 즉시 기본 정보로 업데이트 (프로필 조회 없이)
+          setUser({
+            id: session.user.id,
+            email: session.user.email || "",
+            full_name: session.user.user_metadata?.full_name,
+          });
         }
       }
     );

@@ -71,7 +71,7 @@ export default function HistoryPage() {
     const loadData = async () => {
       // Add timeout wrapper to prevent infinite loading
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Request timeout')), 15000);
+        setTimeout(() => reject(new Error('Request timeout')), 5000);
       });
 
       try {
@@ -96,16 +96,19 @@ export default function HistoryPage() {
   const fetchHistory = async () => {
     setIsLoading(true);
     try {
+      // 캐시된 세션 사용 (getUser보다 빠름)
       const {
-        data: { user },
-      } = await supabase.auth.getUser();
+        data: { session },
+      } = await supabase.auth.getSession();
 
-      if (!user) {
+      if (!session?.user) {
         setSessions([]);
         setResults({});
         setIsLoading(false);
         return;
       }
+
+      const user = session.user;
 
       // Fetch all completed sessions
       const { data: sessionsData, error: sessionsError } = await supabase
