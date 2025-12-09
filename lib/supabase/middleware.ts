@@ -27,7 +27,7 @@ const SECURITY_HEADERS = {
 
 // Content Security Policy for production
 const CSP_HEADER = process.env.NODE_ENV === 'production'
-  ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.clarity.ms; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://aiiv.site https://www.aiiv.site https://*.supabase.co https://api.openai.com https://api.cohere.ai https://api.cloud.llamaindex.ai wss://*.supabase.co; frame-ancestors 'none';"
+  ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.clarity.ms; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; media-src 'self' blob:; connect-src 'self' https://aiiv.site https://www.aiiv.site https://*.supabase.co https://api.openai.com https://api.cohere.ai https://api.cloud.llamaindex.ai wss://*.supabase.co; frame-ancestors 'none';"
   : '';
 
 // Strict Transport Security (only in production with HTTPS)
