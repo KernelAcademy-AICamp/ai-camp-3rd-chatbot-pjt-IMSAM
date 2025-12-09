@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import "./globals.css";
+import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
   title: "IMSAM - AI 모의 면접",
@@ -42,6 +43,7 @@ export default function RootLayout({
     <html lang="ko" className="dark">
       <body className="antialiased">
         {children}
+        <Toaster />
         {clarityId && (
           <Script id="microsoft-clarity" strategy="afterInteractive">
             {`
