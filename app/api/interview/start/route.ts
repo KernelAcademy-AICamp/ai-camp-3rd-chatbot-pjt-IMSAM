@@ -280,7 +280,7 @@ export async function POST(req: NextRequest) {
       jd_text: jd_text || null, // Store JD text
     };
 
-    const { data: session, error: sessionError } = await supabase
+    const { data: session, error: sessionError } = await (supabase as any)
       .from('interview_sessions')
       .insert({
         user_id: userId,
@@ -348,7 +348,7 @@ export async function POST(req: NextRequest) {
     // Get user's previous interview keywords for continuity
     let userKeywords: UserKeyword[] = [];
     try {
-      const { data: keywordsData } = await supabase
+      const { data: keywordsData } = await (supabase as any)
         .from('user_keywords')
         .select('keyword, category, context, mentioned_count')
         .eq('user_id', userId)
@@ -412,7 +412,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Save first message
-    const { data: message, error: messageError } = await supabase
+    const { data: message, error: messageError } = await (supabase as any)
       .from('messages')
       .insert({
         session_id: session.id,
