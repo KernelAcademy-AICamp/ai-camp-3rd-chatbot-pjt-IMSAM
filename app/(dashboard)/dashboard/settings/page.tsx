@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -68,8 +68,11 @@ export default function SettingsPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [settings, setSettings] = useState<UserSettings>(defaultSettings);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showAccountDeleteConfirm, setShowAccountDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
-  const supabase = useMemo(() => createBrowserSupabaseClient(), []);
+  const supabase = createBrowserSupabaseClient();
 
   useEffect(() => {
     fetchUserData();
@@ -146,22 +149,25 @@ export default function SettingsPage() {
   const handleDeleteAllData = async () => {
     if (!profile) return;
 
+    setIsDeleting(true);
     try {
-      // Delete all interview results
-      await supabase
-        .from("interview_results")
+      // Just delete interview_sessions - CASCADE will handle messages and results
+      const { error } = await supabase
+        .from("interview_sessions")
         .delete()
         .eq("user_id", profile.id);
 
-      // Delete all messages
-      await supabase
-        .from("messages")
-        .delete()
-        .eq("session_id", profile.id);
+      if (error) throw error;
 
-      // Delete all interview sessions
+      // Also delete user keywords
       await supabase
-        .from("interview_sessions")
+        .from("user_keywords")
+        .delete()
+        .eq("user_id", profile.id);
+
+      // Delete user interview summaries
+      await supabase
+        .from("user_interview_summaries")
         .delete()
         .eq("user_id", profile.id);
 
@@ -170,6 +176,33 @@ export default function SettingsPage() {
     } catch (error) {
       console.error("Error deleting data:", error);
       toast.error("데이터 삭제에 실패했습니다");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setIsDeletingAccount(true);
+    try {
+      const response = await fetch("/api/auth/delete-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success("계정이 삭제되었습니다. 안녕히 가세요!");
+        // Redirect to home page
+        window.location.href = "/";
+      } else {
+        toast.error(data.error || "계정 삭제에 실패했습니다");
+      }
+    } catch (error) {
+      console.error("Account deletion error:", error);
+      toast.error("계정 삭제 중 오류가 발생했습니다");
+    } finally {
+      setIsDeletingAccount(false);
     }
   };
 
@@ -573,41 +606,98 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {!showDeleteConfirm ? (
-              <Button
-                variant="outline"
-                className="gap-2 border-destructive/50 text-destructive hover:bg-destructive/10"
-                onClick={() => setShowDeleteConfirm(true)}
-              >
-                <Trash2 className="w-4 h-4" />
-                모든 면접 데이터 삭제
-              </Button>
-            ) : (
-              <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/30">
-                <p className="text-sm text-foreground mb-4">
-                  정말로 모든 면접 데이터를 삭제하시겠습니까? 이 작업은 되돌릴 수
-                  없습니다.
-                </p>
-                <div className="flex gap-3">
+            <div className="space-y-4">
+              {/* Delete All Data */}
+              {!showDeleteConfirm ? (
+                <Button
+                  variant="outline"
+                  className="gap-2 border-destructive/50 text-destructive hover:bg-destructive/10"
+                  onClick={() => setShowDeleteConfirm(true)}
+                >
+                  <Trash2 className="w-4 h-4" />
+                  모든 면접 데이터 삭제
+                </Button>
+              ) : (
+                <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/30">
+                  <p className="text-sm text-foreground mb-4">
+                    정말로 모든 면접 데이터를 삭제하시겠습니까? 이 작업은 되돌릴 수
+                    없습니다.
+                  </p>
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowDeleteConfirm(false)}
+                      disabled={isDeleting}
+                    >
+                      취소
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleDeleteAllData}
+                      disabled={isDeleting}
+                      className="gap-2"
+                    >
+                      {isDeleting ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-4 h-4" />
+                      )}
+                      {isDeleting ? "삭제 중..." : "삭제 확인"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Account Deletion */}
+              <div className="pt-4 border-t border-destructive/20">
+                {!showAccountDeleteConfirm ? (
                   <Button
                     variant="outline"
-                    size="sm"
-                    onClick={() => setShowDeleteConfirm(false)}
+                    className="gap-2 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    onClick={() => setShowAccountDeleteConfirm(true)}
                   >
-                    취소
+                    <AlertTriangle className="w-4 h-4" />
+                    회원 탈퇴
                   </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleDeleteAllData}
-                    className="gap-2"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    삭제 확인
-                  </Button>
-                </div>
+                ) : (
+                  <div className="p-4 rounded-xl bg-destructive/20 border border-destructive/50">
+                    <p className="text-sm font-medium text-destructive mb-2">
+                      정말로 탈퇴하시겠습니까?
+                    </p>
+                    <p className="text-xs text-muted-foreground mb-4">
+                      회원 탈퇴 시 모든 데이터(면접 기록, 리포트, 키워드, 프로필)가
+                      영구적으로 삭제되며 복구할 수 없습니다.
+                    </p>
+                    <div className="flex gap-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowAccountDeleteConfirm(false)}
+                        disabled={isDeletingAccount}
+                      >
+                        취소
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleDeleteAccount}
+                        disabled={isDeletingAccount}
+                        className="gap-2"
+                      >
+                        {isDeletingAccount ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <AlertTriangle className="w-4 h-4" />
+                        )}
+                        {isDeletingAccount ? "탈퇴 처리 중..." : "회원 탈퇴 확인"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </Card>
         </motion.div>
       </div>

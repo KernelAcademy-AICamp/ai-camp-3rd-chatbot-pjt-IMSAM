@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   LayoutDashboard,
@@ -36,10 +36,11 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const supabase = useMemo(() => createBrowserSupabaseClient(), []);
+
+  // Get singleton Supabase client
+  const supabase = createBrowserSupabaseClient();
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -68,7 +69,7 @@ export default function DashboardLayout({
       async (event, session) => {
         if (event === "SIGNED_OUT") {
           setUser(null);
-          router.push("/login");
+          window.location.href = "/login";
         } else if (session?.user) {
           const { data: profile } = await supabase
             .from("profiles")
@@ -86,17 +87,36 @@ export default function DashboardLayout({
     );
 
     return () => subscription.unsubscribe();
-  }, [supabase, router]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
+      // Sign out from Supabase
       await supabase.auth.signOut();
-      router.push("/login");
+
+      // Clear all storage
+      sessionStorage.clear();
+      localStorage.clear();
+
+      // Clear all cookies (including Supabase auth cookies)
+      document.cookie.split(";").forEach((cookie) => {
+        const name = cookie.split("=")[0].trim();
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${window.location.hostname};`;
+      });
+
+      // Force redirect to login page
+      window.location.href = "/login";
     } catch (error) {
       console.error("Logout error:", error);
-    } finally {
-      setIsLoggingOut(false);
+      // Even on error, clear cookies and redirect
+      document.cookie.split(";").forEach((cookie) => {
+        const name = cookie.split("=")[0].trim();
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+      });
+      window.location.href = "/login";
     }
   };
 

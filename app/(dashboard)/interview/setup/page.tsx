@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -17,9 +17,32 @@ import {
   Loader2,
   FolderOpen,
   AlertCircle,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
-import { JOB_TYPES, INDUSTRIES, DIFFICULTY_LEVELS } from "@/types/interview";
+import { DIFFICULTY_LEVELS } from "@/types/interview";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+
+interface JobCategory {
+  id: string;
+  code: string;
+  name_ko: string;
+  icon: string;
+  sort_order: number;
+}
+
+interface Industry {
+  id: string;
+  code: string;
+  name_ko: string;
+  icon: string;
+  sort_order: number;
+}
+
+// 한 줄에 표시할 아이템 수 (반응형)
+const ITEMS_PER_ROW_JOB = { mobile: 2, desktop: 3 };
+const ITEMS_PER_ROW_INDUSTRY = { mobile: 2, desktop: 4 };
+const VISIBLE_ROWS = 2;
 
 interface UploadedFile {
   file: File;
@@ -44,6 +67,15 @@ export default function InterviewSetupPage() {
 
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [userProfile, setUserProfile] = useState<{ job_type?: string; industry?: string } | null>(null);
+
+  // DB에서 가져온 데이터
+  const [jobCategories, setJobCategories] = useState<JobCategory[]>([]);
+  const [industries, setIndustries] = useState<Industry[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+
+  // 더보기 토글 상태
+  const [showAllJobs, setShowAllJobs] = useState(false);
+  const [showAllIndustries, setShowAllIndustries] = useState(false);
 
   const [setup, setSetup] = useState<SetupState>({
     jobType: "",
@@ -89,6 +121,60 @@ export default function InterviewSetupPage() {
 
     checkAuth();
   }, [router, supabase]);
+
+  // DB에서 직무/산업 데이터 가져오기
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoadingData(true);
+      try {
+        const [jobRes, industryRes] = await Promise.all([
+          supabase
+            .from("job_categories")
+            .select("id, code, name_ko, icon, sort_order")
+            .eq("is_active", true)
+            .order("sort_order"),
+          supabase
+            .from("industries")
+            .select("id, code, name_ko, icon, sort_order")
+            .eq("is_active", true)
+            .order("sort_order"),
+        ]);
+
+        if (jobRes.data) {
+          setJobCategories(jobRes.data);
+        }
+        if (industryRes.data) {
+          setIndustries(industryRes.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch data:", err);
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+
+    fetchData();
+  }, [supabase]);
+
+  // 표시할 직무 아이템 계산
+  const visibleJobs = useMemo(() => {
+    if (showAllJobs) return jobCategories;
+    // 데스크탑 기준 2줄
+    const limit = ITEMS_PER_ROW_JOB.desktop * VISIBLE_ROWS;
+    return jobCategories.slice(0, limit);
+  }, [jobCategories, showAllJobs]);
+
+  // 표시할 산업 아이템 계산
+  const visibleIndustries = useMemo(() => {
+    if (showAllIndustries) return industries;
+    // 데스크탑 기준 2줄
+    const limit = ITEMS_PER_ROW_INDUSTRY.desktop * VISIBLE_ROWS;
+    return industries.slice(0, limit);
+  }, [industries, showAllIndustries]);
+
+  // 더보기 버튼 표시 여부
+  const showJobsMoreButton = jobCategories.length > ITEMS_PER_ROW_JOB.desktop * VISIBLE_ROWS;
+  const showIndustriesMoreButton = industries.length > ITEMS_PER_ROW_INDUSTRY.desktop * VISIBLE_ROWS;
 
   const handleFileUpload = async (
     file: File,
@@ -264,23 +350,54 @@ export default function InterviewSetupPage() {
                   </p>
                 </div>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-                {JOB_TYPES.map((job) => (
-                  <button
-                    key={job.value}
-                    onClick={() =>
-                      setSetup((prev) => ({ ...prev, jobType: job.value }))
-                    }
-                    className={`p-2.5 sm:p-3 rounded-lg sm:rounded-xl text-xs sm:text-sm transition-all touch-target ${
-                      setup.jobType === job.value
-                        ? "bg-mint text-navy font-medium"
-                        : "bg-secondary/50 text-foreground hover:bg-secondary active:scale-95"
-                    }`}
-                  >
-                    {job.label}
-                  </button>
-                ))}
-              </div>
+              {isLoadingData ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-mint" />
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+                    <AnimatePresence mode="popLayout">
+                      {visibleJobs.map((job) => (
+                        <motion.button
+                          key={job.code}
+                          layout
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.9 }}
+                          onClick={() =>
+                            setSetup((prev) => ({ ...prev, jobType: job.code }))
+                          }
+                          className={`p-2.5 sm:p-3 rounded-lg sm:rounded-xl text-xs sm:text-sm transition-all touch-target ${
+                            setup.jobType === job.code
+                              ? "bg-mint text-navy font-medium"
+                              : "bg-secondary/50 text-foreground hover:bg-secondary active:scale-95"
+                          }`}
+                        >
+                          <span className="mr-1">{job.icon}</span>
+                          {job.name_ko}
+                        </motion.button>
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                  {showJobsMoreButton && (
+                    <button
+                      onClick={() => setShowAllJobs(!showAllJobs)}
+                      className="w-full mt-3 py-2 flex items-center justify-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showAllJobs ? (
+                        <>
+                          접기 <ChevronUp className="w-4 h-4" />
+                        </>
+                      ) : (
+                        <>
+                          더보기 ({jobCategories.length - visibleJobs.length}개) <ChevronDown className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                  )}
+                </>
+              )}
             </Card>
           </motion.div>
 
@@ -290,39 +407,70 @@ export default function InterviewSetupPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <Card className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-soft-blue/20 flex items-center justify-center">
-                  <Building className="w-5 h-5 text-soft-blue" />
+            <Card className="p-4 sm:p-6">
+              <div className="flex items-center gap-2 sm:gap-3 mb-4">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-soft-blue/20 flex items-center justify-center flex-shrink-0">
+                  <Building className="w-4 h-4 sm:w-5 sm:h-5 text-soft-blue" />
                 </div>
-                <div>
-                  <h2 className="font-medium text-foreground">산업 분야</h2>
-                  <p className="text-sm text-muted-foreground">
+                <div className="min-w-0">
+                  <h2 className="font-medium text-sm sm:text-base text-foreground">산업 분야</h2>
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     선택사항 - 산업별 맞춤 질문 제공
                   </p>
                 </div>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3">
-                {INDUSTRIES.map((industry) => (
-                  <button
-                    key={industry.value}
-                    onClick={() =>
-                      setSetup((prev) => ({
-                        ...prev,
-                        industry:
-                          prev.industry === industry.value ? "" : industry.value,
-                      }))
-                    }
-                    className={`p-2.5 sm:p-3 rounded-lg sm:rounded-xl text-xs sm:text-sm transition-all touch-target ${
-                      setup.industry === industry.value
-                        ? "bg-soft-blue text-navy font-medium"
-                        : "bg-secondary/50 text-foreground hover:bg-secondary active:scale-95"
-                    }`}
-                  >
-                    {industry.label}
-                  </button>
-                ))}
-              </div>
+              {isLoadingData ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-soft-blue" />
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3">
+                    <AnimatePresence mode="popLayout">
+                      {visibleIndustries.map((industry) => (
+                        <motion.button
+                          key={industry.code}
+                          layout
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.9 }}
+                          onClick={() =>
+                            setSetup((prev) => ({
+                              ...prev,
+                              industry:
+                                prev.industry === industry.code ? "" : industry.code,
+                            }))
+                          }
+                          className={`p-2.5 sm:p-3 rounded-lg sm:rounded-xl text-xs sm:text-sm transition-all touch-target ${
+                            setup.industry === industry.code
+                              ? "bg-soft-blue text-navy font-medium"
+                              : "bg-secondary/50 text-foreground hover:bg-secondary active:scale-95"
+                          }`}
+                        >
+                          <span className="mr-1">{industry.icon}</span>
+                          {industry.name_ko}
+                        </motion.button>
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                  {showIndustriesMoreButton && (
+                    <button
+                      onClick={() => setShowAllIndustries(!showAllIndustries)}
+                      className="w-full mt-3 py-2 flex items-center justify-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showAllIndustries ? (
+                        <>
+                          접기 <ChevronUp className="w-4 h-4" />
+                        </>
+                      ) : (
+                        <>
+                          더보기 ({industries.length - visibleIndustries.length}개) <ChevronDown className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                  )}
+                </>
+              )}
             </Card>
           </motion.div>
 
@@ -332,14 +480,14 @@ export default function InterviewSetupPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
-            <Card className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
-                  <Gauge className="w-5 h-5 text-amber-500" />
+            <Card className="p-4 sm:p-6">
+              <div className="flex items-center gap-2 sm:gap-3 mb-4">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                  <Gauge className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500" />
                 </div>
-                <div>
-                  <h2 className="font-medium text-foreground">난이도</h2>
-                  <p className="text-sm text-muted-foreground">
+                <div className="min-w-0">
+                  <h2 className="font-medium text-sm sm:text-base text-foreground">난이도</h2>
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     면접 난이도를 선택하세요
                   </p>
                 </div>
@@ -373,16 +521,16 @@ export default function InterviewSetupPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
           >
-            <Card className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-violet-500/20 flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-violet-500" />
+            <Card className="p-4 sm:p-6">
+              <div className="flex items-center gap-2 sm:gap-3 mb-4">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-violet-500/20 flex items-center justify-center flex-shrink-0">
+                  <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-violet-500" />
                 </div>
-                <div>
-                  <h2 className="font-medium text-foreground">
+                <div className="min-w-0">
+                  <h2 className="font-medium text-sm sm:text-base text-foreground">
                     이력서/자소서 업로드
                   </h2>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     선택사항 - 맞춤형 질문 생성에 활용됩니다
                   </p>
                 </div>
@@ -448,16 +596,16 @@ export default function InterviewSetupPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
           >
-            <Card className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
-                  <FolderOpen className="w-5 h-5 text-emerald-500" />
+            <Card className="p-4 sm:p-6">
+              <div className="flex items-center gap-2 sm:gap-3 mb-4">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                  <FolderOpen className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500" />
                 </div>
-                <div>
-                  <h2 className="font-medium text-foreground">
+                <div className="min-w-0">
+                  <h2 className="font-medium text-sm sm:text-base text-foreground">
                     포트폴리오 업로드
                   </h2>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     선택사항 - 프로젝트 경험 기반 질문에 활용됩니다
                   </p>
                 </div>

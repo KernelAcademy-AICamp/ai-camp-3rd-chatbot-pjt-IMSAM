@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -78,7 +78,7 @@ export default function ReportsPage() {
   const [deleteTarget, setDeleteTarget] = useState<InterviewResult | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const supabase = useMemo(() => createBrowserSupabaseClient(), []);
+  const supabase = createBrowserSupabaseClient();
 
   useEffect(() => {
     fetchResults();
@@ -94,6 +94,7 @@ export default function ReportsPage() {
       if (!user) {
         setResults([]);
         setSelectedResult(null);
+        setIsLoading(false);
         return;
       }
 
@@ -115,6 +116,7 @@ export default function ReportsPage() {
         console.error("Results fetch error:", error);
         setResults([]);
         setSelectedResult(null);
+        setIsLoading(false);
         return;
       }
 
@@ -189,23 +191,13 @@ export default function ReportsPage() {
     try {
       const sessionId = result.session_id;
 
-      // Delete interview result
-      await supabase
-        .from("interview_results")
-        .delete()
-        .eq("id", result.id);
-
-      // Delete all messages for this session
-      await supabase
-        .from("messages")
-        .delete()
-        .eq("session_id", sessionId);
-
-      // Delete the session itself
-      await supabase
+      // Delete the session - CASCADE will automatically delete messages and results
+      const { error } = await supabase
         .from("interview_sessions")
         .delete()
         .eq("id", sessionId);
+
+      if (error) throw error;
 
       // Update local state
       const updatedResults = results.filter((r) => r.id !== result.id);
@@ -216,7 +208,7 @@ export default function ReportsPage() {
         setSelectedResult(updatedResults.length > 0 ? updatedResults[0] : null);
       }
 
-      toast.success("리포트가 삭제되었습니다");
+      toast.success("리포트 및 면접 기록이 삭제되었습니다");
     } catch (error) {
       console.error("Delete error:", error);
       toast.error("삭제 중 오류가 발생했습니다");

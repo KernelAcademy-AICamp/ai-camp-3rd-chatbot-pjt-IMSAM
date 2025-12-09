@@ -3,16 +3,24 @@
 // ============================================
 
 import { createBrowserClient } from '@supabase/ssr';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/database';
 
 // Environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-// Browser client (for client components)
+// Singleton browser client instance
+let browserClient: SupabaseClient<Database> | null = null;
+
+// Browser client (for client components) - Singleton pattern
 export function createBrowserSupabaseClient() {
-  return createBrowserClient<Database>(supabaseUrl, supabaseAnonKey);
+  if (browserClient) {
+    return browserClient;
+  }
+
+  browserClient = createBrowserClient<Database>(supabaseUrl, supabaseAnonKey);
+  return browserClient;
 }
 
 // Legacy export for compatibility
