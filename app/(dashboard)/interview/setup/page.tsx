@@ -214,19 +214,7 @@ export default function InterviewSetupPage() {
       formData.append("file", file);
       formData.append("type", type);
 
-      // 리다이렉트 방지를 위해 정규화된 URL 사용 (HTTP→HTTPS, www→non-www)
-      let baseUrl = '';
-      if (typeof window !== 'undefined') {
-        const currentHost = window.location.host;
-        const protocol = window.location.protocol === 'http:' ? 'https:' : window.location.protocol;
-        // www 제거 (www.aiiv.site → aiiv.site 리다이렉트 시 POST→GET 변환 방지)
-        const normalizedHost = currentHost.replace(/^www\./, '');
-        if (window.location.protocol === 'http:' || currentHost !== normalizedHost) {
-          baseUrl = `${protocol}//${normalizedHost}`;
-        }
-      }
-
-      const response = await fetch(`${baseUrl}/api/rag/upload`, {
+      const response = await fetch("/api/rag/upload", {
         method: "POST",
         body: formData,
       });
