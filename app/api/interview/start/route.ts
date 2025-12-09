@@ -194,7 +194,7 @@ export async function POST(req: NextRequest) {
     // Get user tier from profile (default to free)
     let userTier: 'free' | 'pro' | 'unlimited' = 'free';
     try {
-      const { data: profile } = await supabase
+      const { data: profile } = await (supabase as any)
         .from('profiles')
         .select('tier')
         .eq('id', userId)
