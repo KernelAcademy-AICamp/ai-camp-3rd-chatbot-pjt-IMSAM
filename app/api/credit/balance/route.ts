@@ -49,7 +49,7 @@ export async function GET(_req: NextRequest) {
       { onConflict: 'user_id', ignoreDuplicates: true }
     );
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('credits')
     .select('current_credits, total_earned, total_used, updated_at')
     .eq('user_id', userId)
