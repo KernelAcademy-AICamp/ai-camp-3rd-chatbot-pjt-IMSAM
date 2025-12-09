@@ -218,7 +218,7 @@ export const sentryClient = new SentryClient();
 
 // Initialize Sentry with environment config
 export function initSentry(): void {
-  const dsn = process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN;
+  const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 
   if (!dsn) {
     console.warn('[Sentry] DSN not configured. Error tracking disabled.');
