@@ -31,6 +31,14 @@ export async function GET(request: Request) {
 
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
+    // Debug: Kakao/Google OAuth metadata 확인
+    console.log('=== OAuth Callback Debug ===');
+    console.log('Error:', error);
+    console.log('User:', data?.user?.id);
+    console.log('Email:', data?.user?.email);
+    console.log('Provider:', data?.user?.app_metadata?.provider);
+    console.log('User Metadata:', JSON.stringify(data?.user?.user_metadata, null, 2));
+
     if (!error && data.user) {
       // Check if user has completed onboarding (has job_type)
       const { data: profile } = await supabase

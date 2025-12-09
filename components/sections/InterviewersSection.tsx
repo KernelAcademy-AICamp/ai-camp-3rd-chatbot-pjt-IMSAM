@@ -8,7 +8,7 @@ const interviewers = [
   {
     id: "tech-lead",
     emoji: "👨‍💼",
-    name: "김기술",
+    name: "김도현",
     role: "실무팀장",
     title: "Technical Lead",
     personality: "분석적이고 체계적인 질문 스타일",
@@ -20,7 +20,7 @@ const interviewers = [
   {
     id: "hr-manager",
     emoji: "👩‍💻",
-    name: "박인사",
+    name: "박서연",
     role: "HR 담당자",
     title: "HR Manager",
     personality: "따뜻하고 공감적인 질문 스타일",
@@ -32,7 +32,7 @@ const interviewers = [
   {
     id: "senior-peer",
     emoji: "👨‍🔬",
-    name: "이시니어",
+    name: "이준혁",
     role: "시니어 동료",
     title: "Senior Peer",
     personality: "실무 중심의 날카로운 질문 스타일",
@@ -49,7 +49,7 @@ export function InterviewersSection() {
   const [activeInterviewer, setActiveInterviewer] = useState<string | null>(null);
 
   return (
-    <section className="py-32 relative overflow-hidden" ref={ref}>
+    <section id="interviewers" className="py-32 relative overflow-hidden" ref={ref}>
       {/* Background */}
       <div className="absolute inset-0 bg-gradient-to-b from-background via-secondary/10 to-background" />
 

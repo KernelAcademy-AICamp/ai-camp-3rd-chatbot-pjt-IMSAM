@@ -7,6 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "cap:sync": "npx cap sync",
+    "cap:ios": "npx cap open ios",
+    "cap:dev": "CAP_DEV=true npx cap run ios",
     "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -35,6 +38,9 @@
     "version:major": "npm version major -m 'chore(release): %s'"
   },
   "dependencies": {
+    "@capacitor/cli": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/ios": "^8.0.0",
     "@hookform/resolvers": "^3.3.0",
     "@radix-ui/react-accordion": "^1.2.0",
     "@radix-ui/react-alert-dialog": "^1.1.0",
@@ -104,6 +110,7 @@
     "lint-staged": "^15.2.10",
     "postcss": "^8.4.35",
     "prettier": "^3.7.4",
+    "sharp": "^0.34.5",
     "tailwindcss": "^3.4.1",
     "ts-jest": "^29.4.6",
     "typescript": "^5.3.0"

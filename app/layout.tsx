@@ -3,9 +3,32 @@ import Script from "next/script";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "IMSAM - AI Multi-Interviewer Mock Interview",
+  title: "IMSAM - AI 모의 면접",
   description: "3인의 AI 면접관이 실시간 음성으로 다각도 역량을 평가하는 AI 모의면접 서비스",
   keywords: ["AI 면접", "모의면접", "면접 연습", "AI Interview", "Mock Interview"],
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "IMSAM",
+  },
+  icons: {
+    icon: [
+      { url: "/icons/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/icons/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: [
+      { url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+    viewportFit: "cover",
+  },
+  themeColor: "#5EEAD4",
 };
 
 export default function RootLayout({

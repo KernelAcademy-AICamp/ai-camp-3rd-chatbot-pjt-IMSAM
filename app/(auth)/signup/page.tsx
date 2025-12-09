@@ -219,26 +219,6 @@ export default function SignupPage() {
               카카오로 가입
             </Button>
 
-            {/* Naver */}
-            <Button
-              variant="outline"
-              className="w-full h-12 bg-[#03C75A] hover:bg-[#02B350] text-white border-none"
-              onClick={() => {
-                const NAVER_CLIENT_ID = process.env.NEXT_PUBLIC_NAVER_CLIENT_ID;
-                const REDIRECT_URI = `${window.location.origin}/auth/callback/naver`;
-                const STATE = Math.random().toString(36).substring(7);
-                if (NAVER_CLIENT_ID) {
-                  window.location.href = `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${NAVER_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&state=${STATE}`;
-                }
-              }}
-              disabled={isLoading}
-            >
-              <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M16.273 12.845L7.376 0H0v24h7.727V11.155L16.624 24H24V0h-7.727z"/>
-              </svg>
-              네이버로 가입
-            </Button>
-
             {/* Google */}
             <Button
               variant="outline"

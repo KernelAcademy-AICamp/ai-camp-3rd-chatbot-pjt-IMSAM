@@ -107,69 +107,6 @@ export function SecuritySection() {
           ))}
         </div>
 
-        {/* Trust Banner */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={isInView ? { opacity: 1, scale: 1 } : {}}
-          transition={{ duration: 0.8, delay: 0.6 }}
-          className="max-w-4xl mx-auto"
-        >
-          <div className="relative glass-card rounded-3xl p-10 lg:p-14 overflow-hidden">
-            {/* Background Gradient */}
-            <div className="absolute inset-0 bg-gradient-to-r from-mint/5 via-transparent to-soft-blue/5" />
-
-            <div className="relative grid md:grid-cols-2 gap-10 items-center">
-              <div>
-                <h3 className="font-display text-2xl lg:text-3xl font-bold text-foreground mb-4">
-                  당신의 데이터는
-                  <br />
-                  <span className="text-gradient-mint">안전합니다</span>
-                </h3>
-                <p className="text-muted-foreground mb-6">
-                  IMSAM은 사용자의 프라이버시를 최우선으로 생각합니다.
-                  모든 음성 데이터는 세션 종료 즉시 완전히 삭제되며,
-                  어떠한 형태로도 저장되지 않습니다.
-                </p>
-                <div className="flex flex-wrap gap-3">
-                  {["SOC 2 Type II", "ISO 27001", "GDPR", "PIPA"].map((cert) => (
-                    <span
-                      key={cert}
-                      className="px-4 py-2 rounded-lg bg-secondary/50 text-sm font-medium text-foreground"
-                    >
-                      {cert}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Shield Visual */}
-              <div className="flex justify-center">
-                <motion.div
-                  className="relative"
-                  animate={{ y: [0, -10, 0] }}
-                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                >
-                  <div className="w-40 h-40 rounded-full bg-gradient-to-br from-mint/20 to-soft-blue/20 flex items-center justify-center">
-                    <div className="w-28 h-28 rounded-full bg-gradient-to-br from-mint/30 to-soft-blue/30 flex items-center justify-center">
-                      <Shield className="w-14 h-14 text-mint" />
-                    </div>
-                  </div>
-                  {/* Pulse Rings */}
-                  <motion.div
-                    className="absolute inset-0 rounded-full border-2 border-mint/30"
-                    animate={{ scale: [1, 1.5], opacity: [0.5, 0] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                  />
-                  <motion.div
-                    className="absolute inset-0 rounded-full border-2 border-mint/30"
-                    animate={{ scale: [1, 1.8], opacity: [0.3, 0] }}
-                    transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
-                  />
-                </motion.div>
-              </div>
-            </div>
-          </div>
-        </motion.div>
       </div>
     </section>
   );

@@ -16,11 +16,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const navItems = [
-  { label: "Product", href: "#product" },
-  { label: "Technology", href: "#technology" },
-  { label: "Analytics", href: "#analytics" },
-  { label: "Security", href: "#security" },
-  { label: "Case Study", href: "#case-study" },
+  { label: "서비스 소개", href: "#product" },
+  { label: "AI면접", href: "#interviewers" },
+  { label: "분석", href: "#analytics" },
+  { label: "보안", href: "#security" },
+  { label: "사례", href: "#case-study" },
 ];
 
 export function Navigation() {

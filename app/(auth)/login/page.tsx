@@ -75,26 +75,6 @@ export default function LoginPage() {
     }
   };
 
-  // Naver OAuth (custom implementation via Supabase Edge Function or direct)
-  const handleNaverLogin = async () => {
-    setIsLoading(true);
-    setError("");
-
-    // Naver OAuth requires custom setup
-    // For now, we'll use a placeholder that redirects to Naver OAuth
-    const NAVER_CLIENT_ID = process.env.NEXT_PUBLIC_NAVER_CLIENT_ID;
-    const REDIRECT_URI = `${window.location.origin}/auth/callback/naver`;
-    const STATE = Math.random().toString(36).substring(7);
-
-    if (!NAVER_CLIENT_ID) {
-      setError("네이버 로그인이 설정되지 않았습니다.");
-      setIsLoading(false);
-      return;
-    }
-
-    const naverAuthUrl = `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${NAVER_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&state=${STATE}`;
-    window.location.href = naverAuthUrl;
-  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden">
@@ -243,20 +223,6 @@ export default function LoginPage() {
                 <path d="M12 3C6.477 3 2 6.463 2 10.691c0 2.68 1.738 5.028 4.355 6.371-.146.534-.94 3.437-.972 3.671 0 0-.02.166.088.229.108.063.235.014.235.014.31-.043 3.592-2.349 4.159-2.748.694.1 1.415.153 2.135.153 5.523 0 10-3.463 10-7.69C22 6.463 17.523 3 12 3z"/>
               </svg>
               <span className="text-sm sm:text-base">카카오로 로그인</span>
-            </Button>
-
-            {/* Naver */}
-            <Button
-              variant="outline"
-              size="lg"
-              className="w-full bg-[#03C75A] hover:bg-[#02B350] text-white border-none"
-              onClick={handleNaverLogin}
-              disabled={isLoading}
-            >
-              <svg className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M16.273 12.845L7.376 0H0v24h7.727V11.155L16.624 24H24V0h-7.727z"/>
-              </svg>
-              <span className="text-sm sm:text-base">네이버로 로그인</span>
             </Button>
 
             {/* Google */}
