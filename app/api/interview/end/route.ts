@@ -415,7 +415,7 @@ ${transcript}
       // Save keywords to database
       for (const kw of keywordResult.keywords) {
         try {
-          await supabase.rpc('upsert_user_keyword', {
+          await (supabase as any).rpc('upsert_user_keyword', {
             p_user_id: session.user_id,
             p_session_id: session_id,
             p_keyword: kw.keyword,

@@ -161,7 +161,7 @@ export async function POST(req: NextRequest) {
     // Credit charge for starting interview
     // ============================================
     if (INTERVIEW_START_CREDIT > 0) {
-      const { data: chargeResult, error: chargeError } = await supabase.rpc('use_credit', {
+      const { data: chargeResult, error: chargeError } = await (supabase as any).rpc('use_credit', {
         p_user_id: userId,
         p_amount: INTERVIEW_START_CREDIT,
         p_reason: 'INTERVIEW_START',
@@ -251,7 +251,7 @@ export async function POST(req: NextRequest) {
     // Try to get from DB first, fallback to local names
     let interviewerNames: SessionInterviewerNames;
     try {
-      const { data: dbNames } = await supabase.rpc('get_random_interviewer_names');
+      const { data: dbNames } = await (supabase as any).rpc('get_random_interviewer_names');
       if (dbNames && dbNames.length > 0) {
         interviewerNames = {
           hiring_manager: dbNames[0].hiring_manager_name,

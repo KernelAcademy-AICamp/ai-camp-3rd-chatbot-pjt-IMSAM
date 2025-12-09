@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (VOICE_ANALYSIS_CREDIT > 0) {
-      const { data: chargeResult, error: chargeError } = await supabase.rpc('use_credit', {
+      const { data: chargeResult, error: chargeError } = await (supabase as any).rpc('use_credit', {
         p_user_id: authData.user.id,
         p_amount: VOICE_ANALYSIS_CREDIT,
         p_reason: 'VOICE_ANALYSIS',
