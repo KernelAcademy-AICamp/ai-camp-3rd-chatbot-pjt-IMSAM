@@ -382,6 +382,7 @@ export default function InterviewResultPage() {
           .single();
 
         if (error || !resultData) {
+          // eslint-disable-next-line no-console
           console.error("Error fetching result:", error);
           setResult(createEmptyResult(resultId));
           setLoading(false);

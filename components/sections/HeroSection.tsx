@@ -161,7 +161,7 @@ export function HeroSection() {
               variant="hero"
               size="xl"
               onClick={handleTryNow}
-              className="group px-12 sm:px-16 py-5 sm:py-6 text-lg sm:text-xl font-semibold"
+              className="group px-24 sm:px-28 py-7 sm:py-8 text-lg sm:text-xl font-semibold"
             >
               <Play className="w-6 h-6 sm:w-7 sm:h-7 group-hover:scale-110 transition-transform" />
               Try Now
