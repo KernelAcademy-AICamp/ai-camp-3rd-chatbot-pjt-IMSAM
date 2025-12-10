@@ -232,7 +232,8 @@ export default function InterviewPage() {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
-      setTimerActive(false);
+      // Don't stop timer - interview is still in progress
+      // Timer should only stop when interview ends
     }
   };
 

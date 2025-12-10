@@ -147,7 +147,7 @@ function BellCurve({ percentile, score }: BellCurveProps) {
       >
         <Crown className="w-4 h-4 text-mint" />
         <span className="text-sm font-semibold text-mint">
-          상위 {100 - percentile}%
+          상위 {(100 - percentile).toFixed(1)}%
         </span>
       </motion.div>
     </div>
@@ -599,7 +599,7 @@ export default function InterviewResultPage() {
               {result.rank_percentile !== undefined && (
                 <div className="flex items-center justify-center gap-2 text-mint mb-4">
                   <Trophy className="w-5 h-5" />
-                  <span className="font-medium">상위 {100 - result.rank_percentile}%</span>
+                  <span className="font-medium">상위 {(100 - result.rank_percentile).toFixed(1)}%</span>
                 </div>
               )}
 
@@ -794,7 +794,7 @@ export default function InterviewResultPage() {
             <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-mint/10 border border-mint/20">
               <Trophy className="w-4 h-4 text-mint" />
               <span className="font-semibold text-mint">
-                상위 {100 - (result.rank_percentile || 15)}%
+                상위 {(100 - (result.rank_percentile || 15)).toFixed(1)}%
               </span>
             </div>
           </div>

@@ -194,11 +194,31 @@ export default function HistoryPage() {
   const handleDelete = async (sessionId: string) => {
     setIsDeleting(true);
     try {
-      // Delete the session - CASCADE will automatically delete messages and results
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("로그인이 필요합니다");
+        return;
+      }
+
+      // First delete related messages
+      await supabase
+        .from("messages")
+        .delete()
+        .eq("session_id", sessionId);
+
+      // Then delete related interview results
+      await supabase
+        .from("interview_results")
+        .delete()
+        .eq("session_id", sessionId);
+
+      // Finally delete the session with user_id check
       const { error } = await supabase
         .from("interview_sessions")
         .delete()
-        .eq("id", sessionId);
+        .eq("id", sessionId)
+        .eq("user_id", user.id);
 
       if (error) throw error;
 

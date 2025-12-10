@@ -455,7 +455,7 @@ export default function ReportsPage() {
                         <Trophy className="w-5 h-5 text-soft-blue" />
                         <span className="font-display text-xl font-bold text-soft-blue">
                           상위 {selectedResult.rank_percentile
-                            ? 100 - selectedResult.rank_percentile
+                            ? (100 - selectedResult.rank_percentile).toFixed(1)
                             : "-"}%
                         </span>
                       </div>
