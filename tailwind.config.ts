@@ -88,16 +88,16 @@ const config: Config = {
           dark: "hsl(217 100% 70%)",
         },
       },
-      // Border Radius Scale
+      // Border Radius Scale - Minimal for angular design
       borderRadius: {
         none: "0",
-        sm: "0.25rem",    // 4px
-        DEFAULT: "0.5rem", // 8px
-        md: "0.75rem",     // 12px
-        lg: "1rem",        // 16px
-        xl: "1.25rem",     // 20px
-        "2xl": "1.5rem",   // 24px
-        "3xl": "2rem",     // 32px
+        sm: "0.125rem",    // 2px - minimal
+        DEFAULT: "0.125rem", // 2px - minimal default
+        md: "0.25rem",     // 4px
+        lg: "0.375rem",    // 6px
+        xl: "0.5rem",      // 8px
+        "2xl": "0.75rem",  // 12px
+        "3xl": "1rem",     // 16px
         full: "9999px",
       },
       // Typography Scale

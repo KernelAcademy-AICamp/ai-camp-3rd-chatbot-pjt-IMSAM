@@ -254,39 +254,39 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-display text-3xl font-bold text-foreground mb-2">
+          <h1 className="text-2xl font-semibold mb-1">
             분석 리포트
           </h1>
-          <p className="text-muted-foreground">
-            면접별 상세 분석 결과를 확인하세요
+          <p className="text-sm text-muted-foreground">
+            면접별 상세 분석 결과
           </p>
         </div>
       </div>
 
       {results.length === 0 ? (
-        <Card className="p-12 text-center">
-          <BarChart3 className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-foreground mb-2">
+        <Card className="p-8 text-center bg-[hsl(220,50%,8%)] border-none">
+          <BarChart3 className="w-14 h-14 text-muted-foreground/50 mx-auto mb-3" />
+          <h2 className="text-lg font-semibold mb-2">
             분석 리포트가 없습니다
           </h2>
-          <p className="text-muted-foreground mb-6">
-            면접을 완료하면 상세 분석 리포트를 확인할 수 있습니다
+          <p className="text-sm text-muted-foreground mb-4">
+            면접을 완료하면 분석 리포트를 확인할 수 있습니다
           </p>
           <Link href="/interview/setup">
-            <Button variant="mint" className="gap-2">
+            <Button variant="mint" className="h-9 px-4 gap-2 rounded-sm">
               면접 시작하기
               <ChevronRight className="w-4 h-4" />
             </Button>
           </Link>
         </Card>
       ) : (
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-3 gap-4">
           {/* Results List */}
-          <div className="lg:col-span-1 space-y-4">
+          <div className="space-y-3">
             <h2 className="font-semibold text-foreground mb-4">리포트 목록</h2>
             <div className="space-y-3 max-h-[calc(100vh-250px)] overflow-y-auto pr-2">
               {results.map((result, index) => {
