@@ -69,35 +69,61 @@
 
   .dark {
     /* IMSAM Brand Colors - Dark Mode (Default) */
+    /* Existing colors */
     --background: 220 55% 6%;
     --foreground: 220 20% 95%;
-
-    --card: 220 45% 10%;
+    --card: 220 50% 8%;
     --card-foreground: 220 20% 95%;
-
-    --popover: 220 45% 10%;
+    --popover: 220 50% 8%;
     --popover-foreground: 220 20% 95%;
-
-    --primary: 159 100% 74%;
-    --primary-foreground: 220 55% 8%;
-
-    --secondary: 220 40% 15%;
-    --secondary-foreground: 220 20% 90%;
-
-    --muted: 220 40% 12%;
+    --primary: 220 14.3% 95.9%;
+    --primary-foreground: 220 8.9% 46.1%;
+    --secondary: 220 30% 12%;
+    --secondary-foreground: 220 20% 95%;
+    --muted: 220 30% 15%;
     --muted-foreground: 220 15% 55%;
-
-    --accent: 217 100% 84%;
-    --accent-foreground: 220 55% 8%;
-
-    --destructive: 0 70% 50%;
-    --destructive-foreground: 0 0% 100%;
-
+    --accent: 220 30% 15%;
+    --accent-foreground: 220 20% 95%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 220 20% 95%;
     --border: 220 40% 15%;
     --input: 220 40% 15%;
-    --ring: 159 100% 74%;
+    --ring: 159 100% 44%;
+    --radius: 0.125rem;
 
-    --radius: 0.125rem; /* 2px - minimal rounding */
+    /* Premium Design System - Primary Color (Mint) */
+    --mint: 159 100% 44%;              /* #00D9A5 */
+    --mint-light: 159 100% 54%;        /* #33E4B9 */
+    --mint-dark: 159 100% 36%;         /* #00B589 */
+    --mint-subtle: 159 100% 44% / 0.1; /* rgba(0,217,165,0.1) */
+
+    /* Gradient Modes */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--mint)) 0%, hsl(var(--mint-dark)) 100%);
+    --gradient-glow: linear-gradient(135deg, hsl(var(--mint) / 0.2) 0%, hsl(var(--mint-dark) / 0.1) 100%);
+    --gradient-shimmer: linear-gradient(90deg, 
+      hsl(var(--mint) / 0) 0%,
+      hsl(var(--mint) / 0.4) 50%,
+      hsl(var(--mint) / 0) 100%
+    );
+
+    /* Emotion Palette (이모티콘 대체) */
+    --emotion-ready: 159 100% 44%;    /* Mint - 준비 완료 */
+    --emotion-focus: 217 91% 60%;     /* Blue - 집중 */
+    --emotion-warn: 38 92% 50%;       /* Amber - 주의 */
+    --emotion-success: 142 71% 45%;   /* Green - 성공 */
+    --emotion-error: 0 84% 60%;       /* Red - 오류 */
+
+    /* Premium Shadow System (Subtle & Elegant) */
+    --shadow-subtle: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-float: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+    --shadow-elevated: 0 8px 24px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.06);
+    --glow-mint: 0 0 20px hsl(var(--mint) / 0.15), 0 0 40px hsl(var(--mint) / 0.08);
+
+    /* Smooth Transitions */
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+  /* 2px - minimal rounding */
 
     /* Brand Tokens Dark */
     --navy: 220 55% 6%;

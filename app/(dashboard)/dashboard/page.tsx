@@ -343,7 +343,7 @@ export default function DashboardPage() {
             면접 연습 현황
           </p>
         </div>
-        <Link href="/interview/setup">
+        <Link href="/interview/welcome">
           <Button variant="mint" className="h-9 px-4 gap-2 rounded-sm">
             <Play className="w-4 h-4" />
             면접 시작
