@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getSessionLogs } from "@/lib/admin/api";
 import type { SessionLog, PaginatedResponse } from "@/types/admin";
 
 /**
@@ -33,6 +32,15 @@ const tabs: { id: TabType; label: string; icon: React.ElementType }[] = [
   { id: "errors", label: "시스템 에러", icon: AlertTriangle },
   { id: "api", label: "API 요청", icon: Activity },
 ];
+
+// 이메일 마스킹 함수: user@example.com → us***@example.com
+const maskEmail = (email: string | null | undefined): string => {
+  if (!email) return "알 수 없음";
+  const [local, domain] = email.split("@");
+  if (!domain) return email;
+  const masked = local.length > 2 ? local.slice(0, 2) + "***" : local + "***";
+  return `${masked}@${domain}`;
+};
 
 export default function AdminActivityPage() {
   const [activeTab, setActiveTab] = useState<TabType>("sessions");
@@ -52,13 +60,16 @@ export default function AdminActivityPage() {
     setIsLoading(true);
     try {
       if (activeTab === "sessions") {
-        const data = await getSessionLogs({
-          page: currentPage,
-          limit,
-          search: searchQuery || undefined,
-          startDate: dateRange.start || undefined,
-          endDate: dateRange.end || undefined,
+        // API Route를 통해 활동 로그 조회 (RLS 우회)
+        const params = new URLSearchParams({
+          page: currentPage.toString(),
+          limit: limit.toString(),
+          ...(dateRange.start && { startDate: dateRange.start }),
+          ...(dateRange.end && { endDate: dateRange.end }),
         });
+        const res = await fetch(`/api/admin/activity?${params}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
         setLogs(data);
       } else {
         setLogs({
@@ -74,7 +85,7 @@ export default function AdminActivityPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [activeTab, currentPage, searchQuery, dateRange]);
+  }, [activeTab, currentPage, dateRange]);
 
   useEffect(() => {
     loadLogs();
@@ -217,7 +228,7 @@ export default function AdminActivityPage() {
                     onClick={() => setSelectedLog(log)}
                     className="hover:bg-slate-800/30 transition-colors cursor-pointer"
                   >
-                    <td className="px-4 py-3 text-sm text-slate-300">{log.user_email}</td>
+                    <td className="px-4 py-3 text-sm text-slate-300">{maskEmail(log.user_email)}</td>
                     <td className="px-4 py-3 text-sm text-slate-400">{log.job_type}</td>
                     <td className="px-4 py-3 text-sm text-slate-400">
                       {log.difficulty === "easy" ? "초급" : log.difficulty === "medium" ? "중급" : "고급"}
@@ -280,7 +291,7 @@ export default function AdminActivityPage() {
                       <UserIcon className="w-4 h-4" />
                       <span className="text-xs">유저</span>
                     </div>
-                    <p className="text-sm font-medium text-white truncate">{selectedLog.user_email}</p>
+                    <p className="text-sm font-medium text-white truncate">{maskEmail(selectedLog.user_email)}</p>
                   </div>
                   <div className="p-3 rounded-lg bg-slate-700/30">
                     <div className="flex items-center gap-2 text-slate-400 mb-1">

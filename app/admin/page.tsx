@@ -24,7 +24,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { getAdminStats, getRecentActivity, getSessionTrendData } from "@/lib/admin/api";
+import { getRecentActivity, getSessionTrendData } from "@/lib/admin/api";
 import type { AdminStats, ActivityLog } from "@/types/admin";
 import type { ChartDataPoint } from "@/lib/admin/api";
 
@@ -44,8 +44,11 @@ export default function AdminDashboard() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [statsData, activityData, trendData] = await Promise.all([
-          getAdminStats(),
+        // API Route를 통해 통계 조회 (RLS 우회)
+        const statsRes = await fetch('/api/admin/stats');
+        const statsData = await statsRes.json();
+        
+        const [activityData, trendData] = await Promise.all([
           getRecentActivity(10),
           getSessionTrendData(),
         ]);

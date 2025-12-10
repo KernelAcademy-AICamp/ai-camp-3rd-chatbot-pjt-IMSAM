@@ -36,6 +36,15 @@ import { toast } from "sonner";
  * - 이메일 발송
  */
 
+// 이메일 마스킹 함수: user@example.com → us***@example.com
+const maskEmail = (email: string | null | undefined): string => {
+  if (!email) return "알 수 없음";
+  const [local, domain] = email.split("@");
+  if (!domain) return email;
+  const masked = local.length > 2 ? local.slice(0, 2) + "***" : local + "***";
+  return `${masked}@${domain}`;
+};
+
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<PaginatedResponse<AdminUser> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -239,7 +248,7 @@ export default function AdminUsersPage() {
                         </div>
                         <div>
                           <p className="font-medium text-white">{user.full_name || "이름 없음"}</p>
-                          <p className="text-sm text-slate-400">{user.email}</p>
+                          <p className="text-sm text-slate-400">{maskEmail(user.email)}</p>
                         </div>
                       </div>
                     </td>
@@ -316,7 +325,7 @@ export default function AdminUsersPage() {
                   return (
                     <>
                       <div className="px-4 py-2 border-b border-slate-700 mb-2">
-                        <p className="text-sm font-medium text-white truncate">{user.email}</p>
+                        <p className="text-sm font-medium text-white truncate">{maskEmail(user.email)}</p>
                       </div>
                       <button onClick={() => handleToggleAdmin(user)} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700/50">
                         {user.role === "admin" ? <ShieldOff className="w-4 h-4" /> : <Shield className="w-4 h-4" />}

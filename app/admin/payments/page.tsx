@@ -13,15 +13,72 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getCreditTransactions } from "@/lib/admin/api";
-import type { CreditTransaction } from "@/lib/admin/api";
-import type { PaginatedResponse } from "@/types/admin";
+
+// 확장된 CreditTransaction 타입 (유저 이름 포함)
+interface CreditTransaction {
+  id: string;
+  user_id: string;
+  user_email: string;
+  user_name: string;
+  amount: number;
+  reason: string;
+  balance_after: number | null;
+  created_at: string;
+}
+
+interface PaginatedResponse {
+  data: CreditTransaction[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+// 이메일 마스킹 함수: user@example.com → us***@example.com
+const maskEmail = (email: string | null | undefined): string => {
+  if (!email) return "알 수 없음";
+  const [local, domain] = email.split("@");
+  if (!domain) return email;
+  const masked = local.length > 2 ? local.slice(0, 2) + "***" : local + "***";
+  return `${masked}@${domain}`;
+};
+
+// 사유 한글 변환
+const translateReason = (reason: string): string => {
+  const translations: Record<string, string> = {
+    // 면접 관련
+    "INTERVIEW_START": "면접 시작",
+    "INTERVIEW_COMPLETE": "면접 완료",
+    "VOICE_ANALYSIS": "음성 분석",
+    // 일일 보상
+    "DAILY_LOGIN": "일일 로그인 보상",
+    "DAILY_REWARD": "일일 보상",
+    // 가입/결제
+    "SIGNUP_BONUS": "가입 보너스",
+    "PURCHASE": "크레딧 구매",
+    // 플랜 업그레이드
+    "PLAN_UPGRADE_BLOOM": "Bloom 플랜 업그레이드",
+    "PLAN_UPGRADE_SPROUT": "Sprout 플랜 업그레이드",
+    "PLAN_UPGRADE_SEED": "Seed 플랜 업그레이드",
+    // 관리자
+    "ADMIN_GRANT": "관리자 지급",
+    "MANUAL_CREDIT": "수동 크레딧 지급",
+    "관리자 지급": "관리자 지급",
+    // 기타
+    "AI_USE": "AI 사용",
+    "API_USAGE": "API 사용",
+    "REFUND": "환불",
+    "PROMOTION": "프로모션",
+    "Earned": "적립",
+  };
+  return translations[reason] || reason;
+};
 
 /**
  * 결제 (크레딧 트랜잭션) 내역 페이지
  */
 export default function AdminPaymentsPage() {
-  const [transactions, setTransactions] = useState<PaginatedResponse<CreditTransaction> | null>(null);
+  const [transactions, setTransactions] = useState<PaginatedResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -32,18 +89,20 @@ export default function AdminPaymentsPage() {
   const loadTransactions = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await getCreditTransactions({
-        page: currentPage,
-        limit,
-        search: searchQuery || undefined,
+      // API Route를 통해 결제 내역 조회 (RLS 우회)
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: limit.toString(),
       });
+      const res = await fetch(`/api/admin/payments?${params}`);
+      const data = await res.json();
       setTransactions(data);
     } catch (error) {
       console.error("Failed to load transactions:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, searchQuery]);
+  }, [currentPage]);
 
   useEffect(() => {
     loadTransactions();
@@ -116,7 +175,12 @@ export default function AdminPaymentsPage() {
                     onClick={() => setSelectedTx(tx)}
                     className="hover:bg-slate-800/30 transition-colors cursor-pointer"
                   >
-                    <td className="px-4 py-3 text-sm text-slate-300">{tx.user_email}</td>
+                    <td className="px-4 py-3">
+                      <div>
+                        <p className="text-sm text-white">{tx.user_name}</p>
+                        <p className="text-xs text-slate-500">{maskEmail(tx.user_email)}</p>
+                      </div>
+                    </td>
                     <td className="px-4 py-3">
                       <span className={`flex items-center gap-1 text-sm font-medium ${
                         tx.amount > 0 ? "text-green-400" : "text-red-400"
@@ -129,7 +193,7 @@ export default function AdminPaymentsPage() {
                         {tx.amount > 0 ? "+" : ""}{tx.amount}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-slate-400">{tx.reason}</td>
+                    <td className="px-4 py-3 text-sm text-slate-400">{translateReason(tx.reason)}</td>
                     <td className="px-4 py-3 text-sm text-slate-400">{tx.balance_after ?? "-"}</td>
                     <td className="px-4 py-3 text-sm text-slate-500">
                       {new Date(tx.created_at).toLocaleString("ko-KR")}
@@ -193,13 +257,14 @@ export default function AdminPaymentsPage() {
                     <p className={`text-2xl font-bold ${selectedTx.amount > 0 ? "text-green-400" : "text-red-400"}`}>
                       {selectedTx.amount > 0 ? "+" : ""}{selectedTx.amount} 크레딧
                     </p>
-                    <p className="text-sm text-slate-400">{selectedTx.reason}</p>
+                    <p className="text-sm text-slate-400">{translateReason(selectedTx.reason)}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4 pt-4">
                   <div className="p-3 rounded-lg bg-slate-700/30">
                     <p className="text-xs text-slate-400 mb-1">유저</p>
-                    <p className="text-sm font-medium text-white truncate">{selectedTx.user_email}</p>
+                    <p className="text-sm font-medium text-white">{selectedTx.user_name}</p>
+                    <p className="text-xs text-slate-500">{maskEmail(selectedTx.user_email)}</p>
                   </div>
                   <div className="p-3 rounded-lg bg-slate-700/30">
                     <p className="text-xs text-slate-400 mb-1">잔액</p>
