@@ -51,22 +51,18 @@ export default function AdminLayout({
   useEffect(() => {
     const checkAccess = async () => {
       try {
-        const { isAuthenticated, isAdmin, user } = await checkAdminAccess();
+        const { isAuthenticated, user } = await checkAdminAccess();
 
         if (!isAuthenticated) {
           router.replace("/login?redirect=/admin");
           return;
         }
 
-        if (!isAdmin) {
-          router.replace("/admin/forbidden");
-          return;
-        }
-
+        // 모든 로그인 유저 접근 허용 (admin 체크 제거)
         setUser(user);
       } catch (error) {
         console.error("Admin access check failed:", error);
-        router.replace("/admin/forbidden");
+        router.replace("/login?redirect=/admin");
       } finally {
         setIsLoading(false);
       }

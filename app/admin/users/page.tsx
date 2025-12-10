@@ -43,6 +43,7 @@ export default function AdminUsersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [actionMenuOpen, setActionMenuOpen] = useState<string | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   
   // Modal states
   const [showCreditModal, setShowCreditModal] = useState(false);
@@ -196,11 +197,11 @@ export default function AdminUsersPage() {
       </div>
 
       {/* Table */}
-      <div className="rounded-xl border border-slate-700/50 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-slate-800/50 border-b border-slate-700/50">
+      <div className="rounded-xl border border-slate-700/50 bg-slate-800/20">
+        <div className="max-h-[600px] overflow-auto">
+          <table className="w-full min-w-[900px]">
+            <thead className="sticky top-0 z-10">
+              <tr className="bg-slate-800 border-b border-slate-700/50">
                 <th className="text-left px-4 py-3 text-xs font-medium text-slate-400 uppercase">유저</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-slate-400 uppercase">가입일</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-slate-400 uppercase">크레딧</th>
@@ -266,43 +267,22 @@ export default function AdminUsersPage() {
                       </span>
                     </td>
                     <td className="px-4 py-4">
-                      <div className="flex items-center justify-end gap-2 relative">
+                      <div className="flex items-center justify-end gap-2">
                         <Button variant="ghost" size="icon-sm" onClick={() => setSelectedUser(user)} className="text-slate-400 hover:text-white">
                           <Eye className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon-sm" onClick={() => setActionMenuOpen(actionMenuOpen === user.id ? null : user.id)} className="text-slate-400 hover:text-white">
+                        <Button 
+                          variant="ghost" 
+                          size="icon-sm" 
+                          onClick={(e) => {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setMenuPosition({ x: rect.right, y: rect.bottom });
+                            setActionMenuOpen(actionMenuOpen === user.id ? null : user.id);
+                          }} 
+                          className="text-slate-400 hover:text-white"
+                        >
                           <MoreHorizontal className="w-4 h-4" />
                         </Button>
-
-                        {/* Action Menu */}
-                        <AnimatePresence>
-                          {actionMenuOpen === user.id && (
-                            <motion.div
-                              initial={{ opacity: 0, scale: 0.95 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              exit={{ opacity: 0, scale: 0.95 }}
-                              className="absolute right-0 top-full mt-1 w-52 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-10 py-1"
-                            >
-                              <button onClick={() => handleToggleAdmin(user)} className="w-full flex items-center gap-2 px-4 py-2 text-sm text-slate-300 hover:bg-slate-700/50">
-                                {user.role === "admin" ? <ShieldOff className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
-                                {user.role === "admin" ? "관리자 권한 해제" : "관리자 권한 부여"}
-                              </button>
-                              <button onClick={() => handleToggleStatus(user)} className="w-full flex items-center gap-2 px-4 py-2 text-sm text-slate-300 hover:bg-slate-700/50">
-                                {user.status === "blocked" ? <Check className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
-                                {user.status === "blocked" ? "유저 활성화" : "유저 차단"}
-                              </button>
-                              <div className="border-t border-slate-700 my-1" />
-                              <button onClick={() => openCreditModal(user)} className="w-full flex items-center gap-2 px-4 py-2 text-sm text-mint hover:bg-slate-700/50">
-                                <Gift className="w-4 h-4" />
-                                크레딧 지급
-                              </button>
-                              <button onClick={() => openEmailModal(user)} className="w-full flex items-center gap-2 px-4 py-2 text-sm text-blue-400 hover:bg-slate-700/50">
-                                <Send className="w-4 h-4" />
-                                이메일 발송
-                              </button>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
                       </div>
                     </td>
                   </tr>
@@ -311,6 +291,53 @@ export default function AdminUsersPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Action Menu (Portal - rendered outside table) */}
+        <AnimatePresence>
+          {actionMenuOpen && users?.data.find(u => u.id === actionMenuOpen) && (
+            <>
+              {/* Backdrop */}
+              <div className="fixed inset-0 z-40" onClick={() => setActionMenuOpen(null)} />
+              {/* Menu */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                style={{ top: menuPosition.y + 4, left: menuPosition.x - 220 }}
+                className="fixed w-56 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl z-50 py-2"
+              >
+                {(() => {
+                  const user = users?.data.find(u => u.id === actionMenuOpen);
+                  if (!user) return null;
+                  return (
+                    <>
+                      <div className="px-4 py-2 border-b border-slate-700 mb-2">
+                        <p className="text-sm font-medium text-white truncate">{user.email}</p>
+                      </div>
+                      <button onClick={() => handleToggleAdmin(user)} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700/50">
+                        {user.role === "admin" ? <ShieldOff className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
+                        {user.role === "admin" ? "관리자 권한 해제" : "관리자 권한 부여"}
+                      </button>
+                      <button onClick={() => handleToggleStatus(user)} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700/50">
+                        {user.status === "blocked" ? <Check className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
+                        {user.status === "blocked" ? "유저 활성화" : "유저 차단"}
+                      </button>
+                      <div className="border-t border-slate-700 my-2" />
+                      <button onClick={() => openCreditModal(user)} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-mint hover:bg-slate-700/50">
+                        <Gift className="w-4 h-4" />
+                        크레딧 지급
+                      </button>
+                      <button onClick={() => openEmailModal(user)} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-blue-400 hover:bg-slate-700/50">
+                        <Send className="w-4 h-4" />
+                        이메일 발송
+                      </button>
+                    </>
+                  );
+                })()}
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
 
         {/* Pagination */}
         {users && users.totalPages > 1 && (
