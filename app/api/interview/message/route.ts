@@ -10,22 +10,53 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import * as Sentry from '@sentry/nextjs';
-import { generateInterviewerResponse, type ChatMessage, type UserKeyword } from '@/lib/llm/router';
+import { generateInterviewerResponse, extractInterviewKeywords, type ChatMessage, type UserKeyword } from '@/lib/llm/router';
 import { ragService } from '@/lib/rag/service';
 import { searchRelevantQuestions } from '@/lib/rag/question-service';
-import { INTERVIEWER_BASE, type InterviewerType, type MBTIType, type JobCategory, type InterviewQuestionSearchResult } from '@/types/interview';
+import { INTERVIEWER_BASE, type InterviewerType, type MBTIType, type JobCategory, type InterviewQuestionSearchResult, type StructuredResponse } from '@/types/interview';
 
-// Maximum follow-up questions per topic before switching to new question
-const MAX_FOLLOW_UPS = 3;
+// Maximum follow-up questions allowed when checking last 3 messages
+// If 전전 and 전전전 are both follow-ups, force new question
+const MAX_CONSECUTIVE_FOLLOW_UPS_IN_HISTORY = 2;
 
-// Enhanced interviewer selection with follow-up probability
-// If same interviewer selected, high chance of follow-up question
-// If different interviewer, transform question or ask new one
-// Limits follow-ups to MAX_FOLLOW_UPS before forcing a new topic
+/**
+ * Check if a new question should be forced based on consecutive follow-ups
+ * Returns true only if there have been 2 consecutive follow-ups (전 and 전전)
+ * Follow-ups are ENCOURAGED by default, new question only after 2 consecutive
+ */
+function shouldForceNewQuestion(recentInterviewerMessages: Array<{ structured_response?: StructuredResponse | null }>): boolean {
+  // Need at least 2 previous interviewer messages to check
+  if (recentInterviewerMessages.length < 2) {
+    return false; // Encourage follow-up
+  }
+
+  // Check the most recent messages (전, 전전)
+  // Index 0 is most recent (전), index 1 is 전전
+  const prev = recentInterviewerMessages[0]?.structured_response; // 전 (most recent)
+  const prevPrev = recentInterviewerMessages[1]?.structured_response; // 전전
+
+  // Check if both are follow-ups
+  const prevIsFollowUp = prev?.follow_up_intent === true;
+  const prevPrevIsFollowUp = prevPrev?.follow_up_intent === true;
+
+  // Force new question only if there have been 2 consecutive follow-ups
+  if (prevIsFollowUp && prevPrevIsFollowUp) {
+    console.log('[Follow-up Check] 2 consecutive follow-ups detected - forcing new question');
+    return true;
+  }
+
+  return false; // Otherwise, encourage follow-up
+}
+
+/**
+ * Enhanced interviewer selection with follow-up probability
+ * If same interviewer selected, high chance of follow-up question
+ * If different interviewer, transform question or ask new one
+ */
 function selectNextInterviewer(
   currentId: InterviewerType,
   turnCount: number,
-  consecutiveFollowUps: number = 0
+  followUpProhibited: boolean = false
 ): { nextId: InterviewerType; isFollowUp: boolean; shouldForceNewTopic: boolean } {
   // Base weights for each interviewer
   const baseWeights = {
@@ -34,8 +65,9 @@ function selectNextInterviewer(
     senior_peer: 0.4,
   };
 
-  // Force new topic if we've hit the follow-up limit
-  if (consecutiveFollowUps >= MAX_FOLLOW_UPS) {
+  // Force new topic if follow-up is prohibited by history analysis
+  if (followUpProhibited) {
+    console.log('[Interviewer Selection] Follow-up prohibited by history - forcing new topic');
     // Must switch interviewer and start new topic
     const others = (Object.keys(baseWeights) as InterviewerType[]).filter(id => id !== currentId);
     const totalWeight = others.reduce((sum, id) => sum + baseWeights[id], 0);
@@ -82,8 +114,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { session_id, content, audio_url } = body;
-    console.log('Request body:', { session_id, content: content?.substring(0, 50), audio_url });
+    const { session_id, content, audio_url, timeout_save_only } = body;
+    console.log('Request body:', { session_id, content: content?.substring(0, 50), audio_url, timeout_save_only });
 
     if (!session_id || !content) {
       console.error('Missing required fields:', { session_id, hasContent: !!content });
@@ -166,11 +198,29 @@ export async function POST(req: NextRequest) {
     }
     console.log('User message saved:', userMessage?.id);
 
+    // If timeout_save_only flag is set, just save the user message and return
+    // This is used when the 5-minute timer runs out during recording
+    if (timeout_save_only) {
+      console.log('[Timeout] Save only mode - skipping interviewer response');
+      return NextResponse.json({
+        success: true,
+        timeout_save_only: true,
+        user_message: {
+          id: userMessage?.id || Date.now().toString(),
+          session_id,
+          role: 'user',
+          content,
+          timestamp: new Date().toISOString(),
+        },
+        message: '타임아웃으로 인해 사용자 메시지만 저장되었습니다.',
+      });
+    }
+
     // Get conversation history (excluding current message to avoid race condition)
     console.log('Fetching conversation history...');
     const { data: historyData, error: historyError } = await supabase
       .from('messages')
-      .select('role, content, interviewer_id')
+      .select('role, content, interviewer_id, structured_response')
       .eq('session_id', session_id)
       .neq('id', userMessage?.id || '') // Exclude the just-saved message
       .order('created_at', { ascending: true });
@@ -189,22 +239,74 @@ export async function POST(req: NextRequest) {
     // Add current user message explicitly
     conversationHistory.push({ role: 'user', content });
 
+    // ============================================
+    // Extract keywords after first user response (자기소개)
+    // ============================================
+    if (session.turn_count === 0) {
+      console.log('[Keyword Extraction] First user response - extracting keywords from self-introduction');
+      try {
+        const extractedKeywords = await extractInterviewKeywords(
+          [{ role: 'user', content }],
+          session.job_type
+        );
+
+        if (extractedKeywords.keywords && extractedKeywords.keywords.length > 0) {
+          console.log(`[Keyword Extraction] Extracted ${extractedKeywords.keywords.length} keywords`);
+
+          // Save keywords to user_keywords table (upsert)
+          for (const kw of extractedKeywords.keywords) {
+            const { error: kwError } = await supabase
+              .from('user_keywords')
+              .upsert({
+                user_id: session.user_id,
+                keyword: kw.keyword,
+                category: kw.category,
+                context: kw.context || null,
+                mentioned_count: kw.mentioned_count || 1,
+              }, {
+                onConflict: 'user_id,keyword',
+                ignoreDuplicates: false,
+              });
+
+            if (kwError) {
+              console.warn(`[Keyword Extraction] Failed to save keyword "${kw.keyword}":`, kwError);
+            }
+          }
+          console.log('[Keyword Extraction] Keywords saved to DB');
+        }
+      } catch (e) {
+        console.warn('[Keyword Extraction] Failed:', e);
+        // Don't fail the request if keyword extraction fails
+      }
+    }
+
+    // ============================================
+    // Analyze recent interviewer messages for follow-up pattern
+    // Follow-ups are ENCOURAGED, but force new question after 2 consecutive
+    // ============================================
+    const recentInterviewerMessages = (historyData || [])
+      .filter((msg: { role: string }) => msg.role === 'interviewer')
+      .slice(-3) // Last 3 interviewer messages
+      .reverse() as Array<{ structured_response?: StructuredResponse | null }>; // Most recent first
+
+    const forceNewQuestionFlag = shouldForceNewQuestion(recentInterviewerMessages);
+    console.log('[Follow-up Check] Recent interviewer messages:', recentInterviewerMessages.length);
+    console.log('[Follow-up Check] Force new question:', forceNewQuestionFlag);
+
     // Select next interviewer with enhanced follow-up logic
     const currentInterviewerId = session.current_interviewer_id as InterviewerType || 'hiring_manager';
 
-    // Track consecutive follow-ups from session metadata
+    // Track session metadata
     interface SessionMetadataExtended {
       interviewer_mbti?: Record<InterviewerType, MBTIType>;
       interviewer_names?: Record<InterviewerType, string>;
-      consecutive_follow_ups?: number;
     }
     const sessionMeta = (session.timer_config as unknown as SessionMetadataExtended) || {};
-    const consecutiveFollowUps = sessionMeta.consecutive_follow_ups || 0;
 
     const { nextId: nextInterviewerId, isFollowUp, shouldForceNewTopic } = selectNextInterviewer(
       currentInterviewerId,
       session.turn_count,
-      consecutiveFollowUps
+      forceNewQuestionFlag // Pass flag when 2+ consecutive follow-ups detected
     );
     const interviewerBase = INTERVIEWER_BASE[nextInterviewerId];
 
@@ -353,12 +455,13 @@ export async function POST(req: NextRequest) {
         industry: session.industry || undefined,
         difficulty: session.difficulty as 'easy' | 'medium' | 'hard',
         turnCount: session.turn_count + 1,
-        // Pass previous interviewer only if NOT a follow-up (for question transition)
-        // If forced new topic, also indicate to generate completely new question
-        previousInterviewerId: (isFollowUp && !shouldForceNewTopic) ? undefined : currentInterviewerId,
+        // Pass previous interviewer for question transition logic
+        previousInterviewerId: isFollowUp ? undefined : currentInterviewerId,
         interviewerMbti,
         jdText: jdText || undefined,
         relevantQuestions: relevantQuestions.length > 0 ? relevantQuestions : undefined,
+        // Force new question after 2 consecutive follow-ups
+        forceNewQuestion: shouldForceNewTopic || forceNewQuestionFlag,
       }
     );
     console.log('LLM response generated:', {
@@ -392,19 +495,12 @@ export async function POST(req: NextRequest) {
     const newTurnCount = session.turn_count + 1;
     const shouldEnd = newTurnCount >= session.max_turns;
 
-    // Update consecutive follow-up count
-    const newConsecutiveFollowUps = isFollowUp ? consecutiveFollowUps + 1 : 0;
-    const updatedTimerConfig = {
-      ...sessionMeta,
-      consecutive_follow_ups: newConsecutiveFollowUps,
-    };
-
     console.log('Updating session:', {
       newTurnCount,
       shouldEnd,
       isFollowUp,
       shouldForceNewTopic,
-      newConsecutiveFollowUps
+      forceNewQuestionFlag
     });
 
     const { error: updateError } = await supabase
@@ -413,7 +509,6 @@ export async function POST(req: NextRequest) {
         turn_count: newTurnCount,
         current_interviewer_id: nextInterviewerId,
         status: shouldEnd ? 'completed' : 'active',
-        timer_config: updatedTimerConfig,
       })
       .eq('id', session_id);
 

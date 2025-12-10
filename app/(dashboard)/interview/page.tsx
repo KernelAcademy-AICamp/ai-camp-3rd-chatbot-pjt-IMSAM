@@ -102,6 +102,9 @@ export default function InterviewPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Ref to track if timeout end is in progress
+  const isTimeoutEndingRef = useRef(false);
+
   // Timer countdown - 5 minute total interview time
   useEffect(() => {
     if (timerActive && timeRemaining > 0 && !isPaused) {
@@ -111,10 +114,18 @@ export default function InterviewPage() {
           if (newTime <= 60) setTimerWarning(true); // Warning at 1 minute left
           if (newTime <= 0) {
             // Auto end interview when time runs out
-            if (isRecording) stopRecording();
             setTimerActive(false);
-            // Automatically end interview and save results
-            endInterview();
+            isTimeoutEndingRef.current = true;
+
+            // If recording, stop and save only the user's answer (no interviewer response)
+            if (isRecording && mediaRecorderRef.current) {
+              // Stop recording - this will trigger onstop handler
+              mediaRecorderRef.current.stop();
+              setIsRecording(false);
+            }
+
+            // End interview without waiting for interviewer response
+            handleTimeoutEnd();
           }
           return newTime;
         });
@@ -219,7 +230,7 @@ export default function InterviewPage() {
 
       mediaRecorder.start();
       setIsRecording(true);
-      setTimerActive(true);
+      // Timer is already active from interview start - don't control it here
     } catch (err) {
       console.error("Recording error:", err);
       setError(err instanceof Error ? err.message : "마이크 접근 권한이 필요합니다.");
@@ -231,14 +242,50 @@ export default function InterviewPage() {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
-      setTimerActive(false);
+      // Timer keeps running until interview ends - don't stop it here
+    }
+  };
+
+  // Handle timeout end - save last answer and end without interviewer response
+  const handleTimeoutEnd = async () => {
+    if (!sessionId) return;
+
+    setIsProcessing(true);
+    setStatusMessage("시간이 종료되었습니다. 결과를 저장 중...");
+
+    try {
+      // End interview and generate report
+      const response = await fetch("/api/interview/end", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: sessionId }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        sessionStorage.setItem("interviewResult", JSON.stringify(data.result));
+        router.push(`/dashboard/${data.result.id}`);
+      } else {
+        setError(data.error || "결과 생성 실패");
+      }
+    } catch (err) {
+      console.error("Timeout end error:", err);
+      setError("면접 종료 중 오류가 발생했습니다.");
+    } finally {
+      setIsProcessing(false);
+      setStatusMessage("");
+      isTimeoutEndingRef.current = false;
     }
   };
 
   const processUserResponse = async (audioBlob: Blob) => {
+    // If timeout is ending, only save the user's answer without getting interviewer response
+    const isTimeoutEnding = isTimeoutEndingRef.current;
+
     try {
       setIsProcessing(true);
-      setStatusMessage(STATUS_MESSAGES.processing);
+      setStatusMessage(isTimeoutEnding ? "마지막 답변 저장 중..." : STATUS_MESSAGES.processing);
       setError("");
 
       // 1. STT - Convert speech to text
@@ -266,7 +313,27 @@ export default function InterviewPage() {
       };
       setMessages((prev) => [...prev, userMessage]);
 
-      // 2. Get interviewer response
+      // If timeout is ending, save user message directly without interviewer response
+      if (isTimeoutEnding && sessionId) {
+        // Save user message to database directly
+        try {
+          await fetch("/api/interview/message", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              session_id: sessionId,
+              content: sttData.text,
+              timeout_save_only: true, // Flag to indicate only save, no interviewer response
+            }),
+          });
+        } catch (e) {
+          console.warn("Failed to save timeout message:", e);
+        }
+        // Don't get interviewer response - handleTimeoutEnd will be called separately
+        return;
+      }
+
+      // 2. Get interviewer response (normal flow)
       await getInterviewerResponse(sttData.text);
     } catch (err) {
       console.error("Processing error:", err);

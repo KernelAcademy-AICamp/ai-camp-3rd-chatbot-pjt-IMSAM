@@ -35,6 +35,7 @@ export interface LLMRequest {
   interviewerMbti?: MBTIType; // Pre-assigned MBTI for the session
   jdText?: string; // Job description for targeted questions
   relevantQuestions?: InterviewQuestionSearchResult[]; // RAG-retrieved interview questions
+  forceNewQuestion?: boolean; // Force new topic when follow-up is prohibited
 }
 
 // User keyword from previous interviews
@@ -115,7 +116,8 @@ export class LLMRouter {
       request.previousInterviewerId,
       request.interviewerId,
       request.jdText,
-      request.relevantQuestions
+      request.relevantQuestions,
+      request.forceNewQuestion
     );
 
     // Limit conversation history to last 3 turns (6 messages: 3 user + 3 assistant)
@@ -174,7 +176,8 @@ export class LLMRouter {
     previousInterviewerId?: InterviewerType,
     currentInterviewerId?: InterviewerType,
     jdText?: string,
-    relevantQuestions?: InterviewQuestionSearchResult[]
+    relevantQuestions?: InterviewQuestionSearchResult[],
+    forceNewQuestion?: boolean
   ): string {
     let prompt = basePrompt;
 
@@ -229,27 +232,31 @@ ${context}
 ${this.formatKeywords(userKeywords)}`;
     }
 
-    // Add follow-up instruction based on previous interviewer
-    if (previousInterviewerId && currentInterviewerId) {
-      if (previousInterviewerId === currentInterviewerId) {
-        // Same interviewer - high probability of follow-up
-        prompt += `
+    // Add follow-up/new question instruction based on history analysis
+    if (forceNewQuestion) {
+      // 2 consecutive follow-ups detected - force new topic
+      prompt += `
 
-## 꼬리질문 지침 (같은 면접관 연속)
-방금 전 질문에 대한 지원자의 답변을 기반으로 꼬리질문을 하세요.
-- 더 구체적인 예시나 수치를 요청
-- 답변에서 언급된 기술/경험을 더 깊이 파고들기
-- "방금 말씀하신 ~에 대해 더 여쭤볼게요" 식으로 연결`;
-      } else {
-        // Different interviewer - transform or new question
-        prompt += `
+## [필수] 새로운 질문으로 전환
+이미 충분히 꼬리질문을 했으니, 이제 새로운 주제로 넘어가세요.
+- 자소서/이력서/채용공고에서 아직 검증하지 않은 부분 질문
+- 완전히 다른 역량이나 경험에 대해 질문
+- "이번에는 다른 주제로 여쭤볼게요" 식으로 자연스럽게 전환
 
-## 질문 전환 지침 (다른 면접관으로 교체)
-이전 면접관의 질문을 이어받되, 당신의 역할에 맞게 변형하세요.
-- 이전 주제를 당신의 관점에서 재질문 (예: 기술적 질문 → 협업 측면으로)
-- 또는 완전히 새로운 주제로 전환
-- "저는 다른 관점에서 여쭤볼게요" 식으로 자연스럽게 전환`;
-      }
+→ 이전 답변에 대한 추가 꼬리질문은 하지 마세요.`;
+    } else {
+      // Encourage follow-up questions by default
+      prompt += `
+
+## [권장] 꼬리질문 장려
+지원자의 답변을 깊이 파고드는 **꼬리질문을 적극 권장**합니다.
+- 답변에서 언급된 경험, 기술, 성과에 대해 더 구체적으로 질문
+- "방금 말씀하신 ~에 대해 더 여쭤볼게요"
+- "그 상황에서 구체적으로 어떻게 대처하셨나요?"
+- 수치나 결과, 본인의 역할 등 디테일 요청
+- 이전 2-3턴의 대화 맥락을 연결하여 질문
+
+→ 꼬리질문으로 지원자의 실제 역량과 경험을 검증하세요.`;
     }
 
     // Core instructions with anti-repetition
@@ -393,6 +400,7 @@ export async function generateInterviewerResponse(
     interviewerMbti?: MBTIType;
     jdText?: string;
     relevantQuestions?: InterviewQuestionSearchResult[];
+    forceNewQuestion?: boolean; // Force new topic when follow-up is prohibited
   }
 ): Promise<LLMResponse> {
   return llmRouter.generateResponse({

@@ -368,48 +368,44 @@ export async function POST(req: NextRequest) {
       console.warn('Failed to load user keywords:', e);
     }
 
-    // Generate first message from hiring manager with assigned MBTI
+    // First interviewer is always hiring manager
     const firstInterviewer: InterviewerType = 'hiring_manager';
     const interviewerBase = INTERVIEWER_BASE[firstInterviewer];
     const firstInterviewerMbti = interviewerMbti[firstInterviewer];
+    const firstInterviewerName = interviewerNames[firstInterviewer];
 
-    console.log('Generating first interviewer message via OpenAI...');
+    console.log('First interviewer:', firstInterviewer, firstInterviewerName);
     console.log('First interviewer MBTI:', firstInterviewerMbti);
 
-    // Build context from uploaded documents
-    const documentContext = [];
-    if (resumeContext) {
-      documentContext.push(`[이력서/자소서]\n${resumeContext}`);
-    }
-    if (portfolioContext) {
-      documentContext.push(`[포트폴리오]\n${portfolioContext}`);
+    // Get user's display name from profile
+    let userName = '지원자';
+    try {
+      const { data: profile } = await (supabase as any)
+        .from('profiles')
+        .select('display_name, full_name')
+        .eq('id', userId)
+        .single();
+
+      if (profile?.display_name) {
+        userName = profile.display_name;
+      } else if (profile?.full_name) {
+        userName = profile.full_name;
+      }
+    } catch (e) {
+      console.warn('Failed to get user name:', e);
     }
 
-    let response;
-    try {
-      response = await generateInterviewerResponse(
-        [{ role: 'user', content: '[면접 시작] 지원자가 입장했습니다.' }],
-        firstInterviewer,
-        job_type,
-        false,
-        documentContext.length > 0 ? documentContext.join('\n\n') : undefined,
-        {
-          userKeywords: userKeywords.length > 0 ? userKeywords : undefined,
-          industry: industry || 'IT/테크',
-          difficulty,
-          turnCount: 1,
-          interviewerMbti: firstInterviewerMbti,
-          jdText: jd_text || undefined,
-        }
-      );
-      console.log('LLM response received, latency:', response.latencyMs, 'ms');
-    } catch (llmError) {
-      console.error('LLM call failed:', llmError);
-      return NextResponse.json(
-        { success: false, error: `AI 응답 생성 실패: ${llmError instanceof Error ? llmError.message : 'Unknown LLM error'}` },
-        { status: 500 }
-      );
-    }
+    // First question is ALWAYS self-introduction (hardcoded for consistency)
+    // Simple and direct format as requested
+    const selfIntroductionMessage = `안녕하세요 ${userName}님, 2분 내로 자기소개 부탁드립니다.`;
+
+    console.log('Using hardcoded self-introduction request for:', userName);
+
+    // Response object for compatibility
+    const response = {
+      content: selfIntroductionMessage,
+      latencyMs: 0, // No LLM call
+    };
 
     // Save first message
     const { data: message, error: messageError } = await (supabase as any)

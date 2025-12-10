@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -107,9 +108,13 @@ export default function LoginPage() {
         <div className="glass-card rounded-2xl sm:rounded-3xl p-6 sm:p-8 lg:p-10">
           {/* Logo */}
           <Link href="/" className="flex items-center justify-center gap-2 sm:gap-3 mb-6 sm:mb-8 touch-target">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-mint to-soft-blue flex items-center justify-center shadow-mint">
-              <span className="font-display font-bold text-navy text-lg sm:text-xl">IM</span>
-            </div>
+            <Image
+              src="/app-icon-dark.png"
+              alt="IMSAM"
+              width={40}
+              height={40}
+              className="w-10 h-10 sm:w-12 sm:h-12 object-contain"
+            />
             <span className="font-display font-semibold text-xl sm:text-2xl text-foreground">
               IMSAM
             </span>
