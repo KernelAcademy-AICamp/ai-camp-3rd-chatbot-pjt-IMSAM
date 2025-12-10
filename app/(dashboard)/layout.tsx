@@ -154,61 +154,57 @@ export default function DashboardLayout({
   return (
     <div className="min-h-screen bg-background flex">
       {/* Sidebar */}
-      <aside className="fixed left-0 top-0 bottom-0 w-64 bg-card border-r border-border/50 flex flex-col z-50">
+      <aside className="fixed left-0 top-0 bottom-0 w-56 bg-[hsl(220,50%,8%)] border-r border-[hsl(220,40%,15%)] flex flex-col z-50">
         {/* Logo */}
-        <div className="p-6 border-b border-border/50">
+        <div className="h-14 px-4 border-b border-[hsl(220,40%,15%)] flex items-center gap-3">
           <Link href="/" className="flex items-center gap-3">
             <Image
               src="/app-icon-dark.png"
               alt="IMSAM"
-              width={40}
-              height={40}
-              className="w-10 h-10 object-contain"
+              width={32}
+              height={32}
+              className="w-8 h-8 object-contain"
             />
-            <span className="font-display font-semibold text-xl text-foreground">
+            <span className="font-display font-semibold text-lg text-foreground">
               IMSAM
             </span>
           </Link>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-2">
+        <nav className="flex-1 p-3">
           {navItems.map((item) => {
             const isActive = pathname === item.href ||
               (item.href !== "/dashboard" && pathname.startsWith(item.href));
 
             return (
               <Link key={item.href} href={item.href}>
-                <motion.div
-                  whileHover={{ x: 4 }}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                <div
+                  className={`relative flex items-center gap-3 px-3 py-2 mb-1 transition-colors ${
                     isActive
                       ? "bg-mint/10 text-mint"
-                      : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+                      : "text-muted-foreground hover:bg-[hsl(220,45%,10%)] hover:text-foreground"
                   }`}
                 >
-                  <item.icon className="w-5 h-5" />
-                  <span className="font-medium">{item.label}</span>
                   {isActive && (
-                    <motion.div
-                      layoutId="activeTab"
-                      className="absolute left-0 w-1 h-8 bg-mint rounded-r-full"
-                    />
+                    <div className="absolute left-0 w-0.5 h-6 bg-mint" />
                   )}
-                </motion.div>
+                  <item.icon className="w-4 h-4" />
+                  <span className="text-sm font-medium">{item.label}</span>
+                </div>
               </Link>
             );
           })}
         </nav>
 
         {/* User Section */}
-        <div className="p-4 border-t border-border/50">
-          <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-secondary/30">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-mint/20 to-soft-blue/20 flex items-center justify-center">
-              <User className="w-5 h-5 text-mint" />
+        <div className="p-3 border-t border-[hsl(220,40%,15%)]">
+          <div className="flex items-center gap-3 px-3 py-2 bg-[hsl(220,45%,10%)]">
+            <div className="w-8 h-8 rounded-sm bg-mint/10 flex items-center justify-center">
+              <User className="w-4 h-4 text-mint" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">
+              <p className="text-xs font-medium text-foreground truncate">
                 {user?.full_name || "사용자"}
               </p>
               <p className="text-xs text-muted-foreground truncate">
@@ -219,20 +215,20 @@ export default function DashboardLayout({
           <button
             onClick={handleLogout}
             disabled={isLoggingOut}
-            className="flex items-center gap-3 w-full px-4 py-3 mt-2 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors disabled:opacity-50"
+            className="flex items-center gap-3 w-full px-3 py-2 mt-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors disabled:opacity-50"
           >
             {isLoggingOut ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-              <LogOut className="w-5 h-5" />
+              <LogOut className="w-4 h-4" />
             )}
-            <span className="font-medium">로그아웃</span>
+            <span className="text-sm font-medium">로그아웃</span>
           </button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 ml-64 min-h-screen">
+      <main className="flex-1 ml-56 min-h-screen">
         {children}
       </main>
     </div>

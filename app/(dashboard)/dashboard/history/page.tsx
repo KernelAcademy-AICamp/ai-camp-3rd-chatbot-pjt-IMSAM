@@ -194,11 +194,31 @@ export default function HistoryPage() {
   const handleDelete = async (sessionId: string) => {
     setIsDeleting(true);
     try {
-      // Delete the session - CASCADE will automatically delete messages and results
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("로그인이 필요합니다");
+        return;
+      }
+
+      // First delete related messages
+      await supabase
+        .from("messages")
+        .delete()
+        .eq("session_id", sessionId);
+
+      // Then delete related interview results
+      await supabase
+        .from("interview_results")
+        .delete()
+        .eq("session_id", sessionId);
+
+      // Finally delete the session with user_id check
       const { error } = await supabase
         .from("interview_sessions")
         .delete()
-        .eq("id", sessionId);
+        .eq("id", sessionId)
+        .eq("user_id", user.id);
 
       if (error) throw error;
 
@@ -295,21 +315,21 @@ export default function HistoryPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-display text-3xl font-bold text-foreground mb-2">
+          <h1 className="text-2xl font-semibold mb-1">
             면접 기록
           </h1>
-          <p className="text-muted-foreground">
-            이전 면접의 대화 내용을 확인하세요
+          <p className="text-sm text-muted-foreground">
+            이전 면접의 대화 내용
           </p>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-4 mb-6">
+      <div className="flex flex-wrap gap-3 mb-4">
         {/* Search */}
         <div className="relative flex-1 min-w-[200px] max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -318,7 +338,7 @@ export default function HistoryPage() {
             placeholder="직무로 검색..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-xl bg-secondary/50 border border-border/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-mint/50"
+            className="w-full pl-10 pr-4 py-2 rounded-sm bg-secondary/50 border border-border/50 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-mint/50"
           />
         </div>
 
@@ -328,7 +348,7 @@ export default function HistoryPage() {
           <select
             value={filterDifficulty}
             onChange={(e) => setFilterDifficulty(e.target.value)}
-            className="px-3 py-2 rounded-xl bg-secondary/50 border border-border/50 text-foreground focus:outline-none focus:border-mint/50"
+            className="px-3 py-2 rounded-sm bg-secondary/50 border border-border/50 text-sm text-foreground focus:outline-none focus:border-mint/50"
           >
             <option value="all">전체 난이도</option>
             <option value="easy">초급</option>
@@ -340,16 +360,16 @@ export default function HistoryPage() {
 
       {/* Sessions List */}
       {filteredSessions.length === 0 ? (
-        <Card className="p-12 text-center">
-          <FileText className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-foreground mb-2">
+        <Card className="p-8 text-center bg-[hsl(220,50%,8%)] border-none">
+          <FileText className="w-14 h-14 text-muted-foreground/50 mx-auto mb-3" />
+          <h2 className="text-lg font-semibold mb-2">
             면접 기록이 없습니다
           </h2>
-          <p className="text-muted-foreground mb-6">
+          <p className="text-sm text-muted-foreground mb-4">
             첫 면접을 시작하고 기록을 확인해보세요
           </p>
           <Link href="/interview/setup">
-            <Button variant="mint" className="gap-2">
+            <Button variant="mint" className="h-9 px-4 gap-2 rounded-sm">
               면접 시작하기
               <ChevronRight className="w-4 h-4" />
             </Button>
@@ -368,16 +388,16 @@ export default function HistoryPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.05 }}
               >
-                <Card className="overflow-hidden">
+                <Card className="overflow-hidden bg-[hsl(220,50%,8%)] border-none shadow-[0_1px_3px_rgba(0,0,0,0.3)]">
                   {/* Session Header */}
                   <div
-                    className="p-6 cursor-pointer hover:bg-secondary/30 transition-colors"
+                    className="p-4 cursor-pointer hover:bg-secondary/30 transition-colors"
                     onClick={() => handleToggleExpand(session.id)}
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-mint/10 flex items-center justify-center">
-                          <MessageCircle className="w-6 h-6 text-mint" />
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-sm bg-mint/10 flex items-center justify-center">
+                          <MessageCircle className="w-5 h-5 text-mint" />
                         </div>
                         <div>
                           <div className="flex items-center gap-2 mb-1">

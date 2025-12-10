@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sora:wght@300;400;500;600;700;800&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sora:wght@300;400;500;600;700;800&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -35,7 +35,15 @@
     --input: 220 20% 88%;
     --ring: 159 100% 44%;
 
-    --radius: 1rem;
+    --radius: 0.125rem; /* 2px - minimal rounding */
+
+    /* Brand Tokens */
+    --navy: 220 55% 8%;
+    --mint: 159 100% 74%;
+    --mint-glow: 159 100% 44%;
+    --soft-blue: 217 100% 84%;
+    --glass: 220 30% 95% / 0.7;
+    --glass-border: 220 30% 85% / 0.3;
 
     /* Brand Tokens */
     --navy: 220 55% 8%;
@@ -61,33 +69,61 @@
 
   .dark {
     /* IMSAM Brand Colors - Dark Mode (Default) */
+    /* Existing colors */
     --background: 220 55% 6%;
     --foreground: 220 20% 95%;
-
-    --card: 220 45% 10%;
+    --card: 220 50% 8%;
     --card-foreground: 220 20% 95%;
-
-    --popover: 220 45% 10%;
+    --popover: 220 50% 8%;
     --popover-foreground: 220 20% 95%;
-
-    --primary: 159 100% 74%;
-    --primary-foreground: 220 55% 8%;
-
-    --secondary: 220 40% 15%;
-    --secondary-foreground: 220 20% 90%;
-
-    --muted: 220 40% 12%;
+    --primary: 220 14.3% 95.9%;
+    --primary-foreground: 220 8.9% 46.1%;
+    --secondary: 220 30% 12%;
+    --secondary-foreground: 220 20% 95%;
+    --muted: 220 30% 15%;
     --muted-foreground: 220 15% 55%;
-
-    --accent: 217 100% 84%;
-    --accent-foreground: 220 55% 8%;
-
-    --destructive: 0 70% 50%;
-    --destructive-foreground: 0 0% 100%;
-
+    --accent: 220 30% 15%;
+    --accent-foreground: 220 20% 95%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 220 20% 95%;
     --border: 220 40% 15%;
     --input: 220 40% 15%;
-    --ring: 159 100% 74%;
+    --ring: 159 100% 44%;
+    --radius: 0.125rem;
+
+    /* Premium Design System - Primary Color (Mint) */
+    --mint: 159 100% 44%;              /* #00D9A5 */
+    --mint-light: 159 100% 54%;        /* #33E4B9 */
+    --mint-dark: 159 100% 36%;         /* #00B589 */
+    --mint-subtle: 159 100% 44% / 0.1; /* rgba(0,217,165,0.1) */
+
+    /* Gradient Modes */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--mint)) 0%, hsl(var(--mint-dark)) 100%);
+    --gradient-glow: linear-gradient(135deg, hsl(var(--mint) / 0.2) 0%, hsl(var(--mint-dark) / 0.1) 100%);
+    --gradient-shimmer: linear-gradient(90deg, 
+      hsl(var(--mint) / 0) 0%,
+      hsl(var(--mint) / 0.4) 50%,
+      hsl(var(--mint) / 0) 100%
+    );
+
+    /* Emotion Palette (이모티콘 대체) */
+    --emotion-ready: 159 100% 44%;    /* Mint - 준비 완료 */
+    --emotion-focus: 217 91% 60%;     /* Blue - 집중 */
+    --emotion-warn: 38 92% 50%;       /* Amber - 주의 */
+    --emotion-success: 142 71% 45%;   /* Green - 성공 */
+    --emotion-error: 0 84% 60%;       /* Red - 오류 */
+
+    /* Premium Shadow System (Subtle & Elegant) */
+    --shadow-subtle: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-float: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+    --shadow-elevated: 0 8px 24px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.06);
+    --glow-mint: 0 0 20px hsl(var(--mint) / 0.15), 0 0 40px hsl(var(--mint) / 0.08);
+
+    /* Smooth Transitions */
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+  /* 2px - minimal rounding */
 
     /* Brand Tokens Dark */
     --navy: 220 55% 6%;
@@ -98,29 +134,29 @@
     --gradient-hero: linear-gradient(180deg, hsl(220 55% 6%), hsl(220 50% 8%));
     --gradient-glass: linear-gradient(135deg, hsl(220 45% 15% / 0.8), hsl(220 45% 10% / 0.4));
 
-    /* Shadows Dark */
-    --shadow-sm: 0 2px 8px hsl(0 0% 0% / 0.2);
-    --shadow-md: 0 8px 32px hsl(0 0% 0% / 0.3);
-    --shadow-lg: 0 16px 64px hsl(0 0% 0% / 0.4);
-    --shadow-glow: 0 0 80px hsl(159 100% 74% / 0.2);
-    --shadow-mint: 0 8px 60px hsl(159 100% 74% / 0.15);
-    
+    /* Shadows Dark - More subtle for angular design */
+    --shadow-sm: 0 1px 3px hsl(0 0% 0% / 0.3);
+    --shadow-md: 0 2px 8px hsl(0 0% 0% / 0.4);
+    --shadow-lg: 0 4px 16px hsl(0 0% 0% / 0.5);
+    --shadow-glow: 0 0 40px hsl(159 100% 74% / 0.15);
+    --shadow-mint: 0 4px 24px hsl(159 100% 74% / 0.12);
+
     /* Conversational Interface Colors */
-    --interview-primary: 159 100% 42%;        /* Mint Green #00D9A3 */
-    --interview-primary-dark: 159 100% 35%;   /* #00B388 */
-    --interview-primary-light: 159 100% 97%;  /* #E6FFF9 */
-    
-    --interview-secondary: 249 100% 69%;      /* Purple #6C63FF */
-    --interview-accent: 339 100% 70%;         /* Pink #FF6B9D */
-    
-    --interview-success: 158 64% 52%;         /* #10B981 */
-    --interview-warning: 38 92% 50%;          /* #F59E0B */
-    --interview-error: 4 90% 58%;             /* #EF4444 */
-    
+    --interview-primary: 159 100% 42%; /* Mint Green #00D9A3 */
+    --interview-primary-dark: 159 100% 35%; /* #00B388 */
+    --interview-primary-light: 159 100% 97%; /* #E6FFF9 */
+
+    --interview-secondary: 249 100% 69%; /* Purple #6C63FF */
+    --interview-accent: 339 100% 70%; /* Pink #FF6B9D */
+
+    --interview-success: 158 64% 52%; /* #10B981 */
+    --interview-warning: 38 92% 50%; /* #F59E0B */
+    --interview-error: 4 90% 58%; /* #EF4444 */
+
     /* Feedback Chip Colors */
-    --chip-excellent: 142 71% 45%;            /* Green */
-    --chip-good: 45 93% 47%;                  /* Yellow */
-    --chip-needs-work: 0 84% 60%;             /* Red */
+    --chip-excellent: 142 71% 45%; /* Green */
+    --chip-good: 45 93% 47%; /* Yellow */
+    --chip-needs-work: 0 84% 60%; /* Red */
   }
 }
 
@@ -139,7 +175,11 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family:
+      "Inter",
+      system-ui,
+      -apple-system,
+      sans-serif;
     /* Prevent text size adjustment on iOS */
     -webkit-text-size-adjust: 100%;
     /* Support for touch devices */
@@ -147,8 +187,13 @@
   }
 
   /* Typography Scale */
-  h1, h2, h3, h4, h5, h6 {
-    font-family: 'Sora', 'Inter', system-ui, sans-serif;
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: "Sora", "Inter", system-ui, sans-serif;
     font-weight: 600;
     line-height: 1.2;
     letter-spacing: -0.02em;
@@ -201,7 +246,10 @@
   }
 
   /* Improve button and input rendering */
-  button, input, select, textarea {
+  button,
+  input,
+  select,
+  textarea {
     font-family: inherit;
   }
 
@@ -264,7 +312,7 @@
   }
 
   .border-gradient::before {
-    content: '';
+    content: "";
     position: absolute;
     inset: -2px;
     border-radius: calc(var(--radius) + 2px);
@@ -282,7 +330,9 @@
 
   /* Hover Card Effect */
   .hover-lift {
-    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition:
+      transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .hover-lift:hover {
@@ -296,7 +346,7 @@
   }
 
   .pulse-ring::after {
-    content: '';
+    content: "";
     position: absolute;
     inset: -4px;
     border-radius: 50%;
@@ -320,10 +370,18 @@
     animation: voice-wave 1s ease-in-out infinite;
   }
 
-  .voice-wave span:nth-child(2) { animation-delay: 0.1s; }
-  .voice-wave span:nth-child(3) { animation-delay: 0.2s; }
-  .voice-wave span:nth-child(4) { animation-delay: 0.3s; }
-  .voice-wave span:nth-child(5) { animation-delay: 0.4s; }
+  .voice-wave span:nth-child(2) {
+    animation-delay: 0.1s;
+  }
+  .voice-wave span:nth-child(3) {
+    animation-delay: 0.2s;
+  }
+  .voice-wave span:nth-child(4) {
+    animation-delay: 0.3s;
+  }
+  .voice-wave span:nth-child(5) {
+    animation-delay: 0.4s;
+  }
 }
 
 @layer utilities {
@@ -500,33 +558,63 @@
 
 /* Keyframe Animations */
 @keyframes gradient-shift {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
 @keyframes pulse-ring {
-  0% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(1.5); opacity: 0; }
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
 }
 
 @keyframes voice-wave {
-  0%, 100% { transform: scaleY(0.3); }
-  50% { transform: scaleY(1); }
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-20px); }
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
 }
 
 @keyframes glow-pulse {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 @keyframes typing {
-  from { width: 0; }
-  to { width: 100%; }
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
 }
 
 /* Custom Animation Classes */
@@ -546,13 +634,23 @@
 
 /* Interview-specific animations */
 @keyframes breathe {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.02); }
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
 }
 
 @keyframes nod {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-4px) rotate(-2deg); }
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-4px) rotate(-2deg);
+  }
 }
 
 @keyframes slide-up {
@@ -567,18 +665,31 @@
 }
 
 @keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes shimmer {
-  0% { background-position: -1000px 0; }
-  100% { background-position: 1000px 0; }
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
 }
 
 @keyframes chip-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
 }
 
 /* Interview animation classes */

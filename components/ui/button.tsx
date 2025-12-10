@@ -16,7 +16,7 @@ const buttonVariants = cva(
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
         // IMSAM Custom Variants
-        hero: "bg-primary text-primary-foreground font-semibold text-base rounded-xl shadow-mint hover:shadow-glow hover:scale-[1.02] active:scale-[0.98] transition-all duration-300",
+        hero: "bg-[#7FFFD4] text-black font-semibold text-base rounded-full shadow-[0_0_40px_#7FFFD4,0_0_80px_rgba(127,255,212,0.5)] hover:shadow-[0_0_60px_#7FFFD4,0_0_100px_rgba(127,255,212,0.6)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-300",
         "hero-outline": "border-2 border-primary/50 bg-transparent text-foreground hover:bg-primary/10 hover:border-primary font-semibold text-base rounded-xl backdrop-blur-sm transition-all duration-300",
         glass: "bg-card/50 backdrop-blur-md text-foreground hover:bg-card/80 border border-border/50 shadow-sm hover:shadow-md",
         mint: "bg-primary text-primary-foreground font-semibold shadow-mint hover:shadow-glow hover:scale-[1.02]",

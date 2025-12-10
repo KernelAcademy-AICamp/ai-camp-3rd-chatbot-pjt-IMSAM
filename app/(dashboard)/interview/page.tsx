@@ -17,6 +17,7 @@ import {
   MessageCircle,
   Clock,
   Send,
+  Eye,
 } from "lucide-react";
 import { INTERVIEWER_BASE, type InterviewerType, type SessionInterviewerNames } from "@/types/interview";
 import { InterviewerAvatar } from "@/components/interview/InterviewerAvatar";
@@ -628,116 +629,159 @@ export default function InterviewPage() {
   return (
     <PageTransition>
     <div className="h-screen flex flex-col bg-background">
-      {/* Header */}
-      <header className="flex items-center justify-between px-6 py-3 border-b border-border/50">
-        <div className="flex items-center gap-3">
+      {/* Header - Premium Minimal */}
+      <header className="flex items-center justify-between px-6 py-3 border-b border-[hsl(220,40%,15%)] bg-[hsl(220,55%,6%)]">
+        <div className="flex items-center gap-4">
+          {/* All 3 interviewers displayed */}
           {interviewerTypes.map((type) => {
             const interviewer = INTERVIEWER_BASE[type];
+            const isActive = currentInterviewerId === type;
+            
             return (
-              <InterviewerAvatar
+              <div
                 key={type}
-                name={interviewerNames[type]}
-                role={interviewer.role}
-                emoji={interviewer.emoji}
-                isActive={currentInterviewerId === type}
-                isListening={currentInterviewerId === type && (isRecording || isSpeaking)}
-                isThinking={currentInterviewerId === type && isProcessing}
-              />
+                className={`flex items-center gap-2 px-3 py-2 rounded-md transition-all w-36 ${
+                  isActive
+                    ? "bg-[hsl(var(--mint)/0.2)] border border-[hsl(var(--mint)/0.5)]"
+                    : "bg-slate-800/50 border border-slate-700/50 opacity-60"
+                }`}
+              >
+                <span className="text-lg">{interviewer.emoji}</span>
+                <div className="flex flex-col">
+                  <span className={`text-xs font-medium ${
+                    isActive ? "text-mint" : "text-slate-400"
+                  }`}>
+                    {interviewerNames[type]}
+                  </span>
+                  <span className="text-[10px] text-slate-500">
+                    {interviewer.role}
+                  </span>
+                </div>
+              </div>
             );
           })}
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Timer */}
-          <div
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
-              isInterviewStarted && timerWarning ? "bg-destructive/20 text-destructive" : "bg-secondary/50"
+          {/* Inner thoughts toggle - moved to header */}
+          <button
+            onClick={() => setShowInnerThoughts(!showInnerThoughts)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-all ${
+              showInnerThoughts
+                ? "bg-violet-500/20 border border-violet-500/30 text-violet-400"
+                : "bg-slate-800/50 border border-slate-700/50 text-slate-500 hover:text-slate-300"
             }`}
           >
-            <Clock className={`w-4 h-4 ${isInterviewStarted && timerWarning ? "animate-pulse" : "text-muted-foreground"}`} />
+            <Eye className="w-3.5 h-3.5" />
+            <span>속마음 {showInnerThoughts ? "ON" : "OFF"}</span>
+          </button>
+
+          {/* Timer - Minimal */}
+          <div
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-md ${
+              isInterviewStarted && timerWarning
+                ? "bg-red-500/10 border border-red-500/30 text-red-400"
+                : "bg-slate-800/50 border border-slate-700/50"
+            }`}
+          >
+            <Clock className={`w-4 h-4 ${timerWarning ? "animate-pulse" : "text-slate-400"}`} />
             <span className="text-sm font-medium tabular-nums">
               {isInterviewStarted ? formatTime(timeRemaining) : "5:00"}
             </span>
           </div>
 
-          <Button variant="ghost" size="icon" onClick={() => setIsMuted(!isMuted)}>
-            {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsMuted(!isMuted)}
+            className="w-8 h-8 rounded-md"
+          >
+            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </Button>
 
           {isInterviewStarted && (
             <>
-              <Button variant="ghost" size="icon" onClick={togglePause}>
-                {isPaused ? <Play className="w-5 h-5" /> : <Pause className="w-5 h-5" />}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={togglePause}
+                className="w-8 h-8 rounded-full"
+              >
+                {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
               </Button>
-              <Button variant="destructive" onClick={handleForceExit} className="gap-2">
-                <Phone className="w-4 h-4" />
-                면접 나가기
+              <Button
+                onClick={handleForceExit}
+                className="h-9 px-4 rounded-md bg-red-600 hover:bg-red-500 text-white font-medium shadow-none"
+              >
+                <Phone className="w-4 h-4 mr-2" />
+                나가기
               </Button>
             </>
           )}
         </div>
       </header>
 
-      {/* Pause Overlay */}
+      {/* Pause Overlay - Premium */}
       <AnimatePresence>
         {isPaused && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center"
+            className="absolute inset-0 z-50 bg-[hsl(220,55%,6%)/0.95] backdrop-blur-sm flex items-center justify-center"
           >
             <div className="text-center">
-              <Pause className="w-16 h-16 text-mint mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-foreground mb-2">면접 일시정지</h2>
-              <p className="text-muted-foreground mb-6">준비가 되면 재개 버튼을 누르세요</p>
-              <Button variant="mint" size="lg" onClick={togglePause} className="gap-2">
-                <Play className="w-5 h-5" />
-                면접 재개
+              <div className="w-16 h-16 mx-auto mb-6 rounded-lg bg-[hsl(var(--mint)/0.1)] border border-[hsl(var(--mint)/0.3)] flex items-center justify-center">
+                <Pause className="w-8 h-8 text-mint" />
+              </div>
+              <h2 className="text-2xl font-semibold text-white mb-2">일시정지</h2>
+              <p className="text-slate-400 mb-8">준비되면 재개하세요</p>
+              <Button
+                onClick={togglePause}
+                className="h-12 px-8 rounded-lg bg-gradient-to-r from-[hsl(var(--mint))] to-[hsl(var(--mint-dark))] text-slate-900"
+              >
+                <Play className="w-5 h-5 mr-2" />
+                재개
               </Button>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Exit Warning Modal */}
+      {/* Exit Warning Modal - Premium */}
       <AnimatePresence>
         {showExitWarning && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center"
+            className="absolute inset-0 z-50 bg-[hsl(220,55%,6%)/0.95] backdrop-blur-sm flex items-center justify-center"
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
+              initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-card border border-border rounded-2xl p-8 max-w-md mx-4 text-center"
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[hsl(220,50%,8%)] border border-slate-700/50 rounded-lg p-8 max-w-md mx-4 text-center"
             >
-              <div className="w-16 h-16 rounded-full bg-destructive/20 flex items-center justify-center mx-auto mb-4">
-                <Phone className="w-8 h-8 text-destructive" />
+              <div className="w-14 h-14 rounded-lg bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto mb-6">
+                <Phone className="w-7 h-7 text-red-400" />
               </div>
-              <h2 className="text-2xl font-bold text-foreground mb-3">면접을 종료하시겠습니까?</h2>
-              <p className="text-muted-foreground mb-6">
-                지금 나가시면 <span className="text-destructive font-semibold">점수가 저장되지 않습니다.</span>
-                <br />
-                면접 결과 분석도 진행되지 않습니다.
+              <h2 className="text-xl font-semibold text-white mb-3">면접을 종료하시겠습니까?</h2>
+              <p className="text-slate-400 mb-6 text-sm">
+                지금 나가시면 <span className="text-red-400 font-medium">점수가 저장되지 않습니다.</span>
               </p>
               <div className="flex gap-3 justify-center">
                 <Button
                   variant="outline"
                   onClick={() => setShowExitWarning(false)}
-                  className="gap-2"
+                  className="h-10 px-6 rounded-md border-slate-600"
                 >
-                  계속 진행
+                  계속
                 </Button>
                 <Button
-                  variant="destructive"
                   onClick={confirmForceExit}
-                  className="gap-2"
+                  className="h-10 px-6 rounded-md bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30"
                 >
-                  <Phone className="w-4 h-4" />
                   나가기
                 </Button>
               </div>
@@ -746,42 +790,48 @@ export default function InterviewPage() {
         )}
       </AnimatePresence>
 
-      {/* Pre-Interview Guide Overlay - Shows for 5 seconds before interview starts */}
+      {/* Pre-Interview Guide - Premium (No Emoji) */}
       <AnimatePresence>
         {showStartGuide && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 z-50 bg-background/95 backdrop-blur-sm flex items-center justify-center"
+            className="absolute inset-0 z-50 bg-[hsl(220,55%,6%)/0.98] backdrop-blur-sm flex items-center justify-center"
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
+              initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-card border border-mint/30 rounded-2xl p-8 max-w-lg mx-4 text-center shadow-lg shadow-mint/10"
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[hsl(220,50%,8%)] border border-[hsl(var(--mint)/0.2)] rounded-lg p-8 max-w-lg mx-4 text-center shadow-[0_0_40px_hsl(var(--mint)/0.1)]"
             >
-              <div className="w-16 h-16 rounded-full bg-mint/20 flex items-center justify-center mx-auto mb-4">
-                <MessageCircle className="w-8 h-8 text-mint" />
+              <div className="w-14 h-14 rounded-lg bg-[hsl(var(--mint)/0.1)] border border-[hsl(var(--mint)/0.3)] flex items-center justify-center mx-auto mb-6">
+                <MessageCircle className="w-7 h-7 text-mint" />
               </div>
-              <h2 className="text-2xl font-bold text-foreground mb-4">답변 팁</h2>
-              <div className="space-y-3 text-left mb-6">
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-secondary/50">
-                  <span className="text-mint text-lg">💡</span>
-                  <p className="text-foreground">구체적인 경험과 사례를 들어 설명하세요</p>
+              <h2 className="text-xl font-semibold text-white mb-6">답변 팁</h2>
+              <div className="space-y-3 text-left mb-8">
+                <div className="flex items-start gap-3 p-3 rounded-md bg-slate-800/50 border border-slate-700/50">
+                  <div className="w-6 h-6 rounded-md bg-[hsl(var(--mint)/0.1)] flex items-center justify-center shrink-0">
+                    <div className="w-2 h-2 rounded-full bg-mint" />
+                  </div>
+                  <p className="text-sm text-slate-300">구체적인 경험과 사례를 들어 설명하세요</p>
                 </div>
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-secondary/50">
-                  <span className="text-mint text-lg">📊</span>
-                  <p className="text-foreground">정량적 결과나 수치를 포함하면 좋습니다</p>
+                <div className="flex items-start gap-3 p-3 rounded-md bg-slate-800/50 border border-slate-700/50">
+                  <div className="w-6 h-6 rounded-md bg-[hsl(var(--mint)/0.1)] flex items-center justify-center shrink-0">
+                    <div className="w-2 h-2 rounded-full bg-mint" />
+                  </div>
+                  <p className="text-sm text-slate-300">정량적 결과나 수치를 포함하면 좋습니다</p>
                 </div>
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-secondary/50">
-                  <span className="text-mint text-lg">⏱️</span>
-                  <p className="text-foreground">약 30초-1분 분량으로 답변해주세요</p>
+                <div className="flex items-start gap-3 p-3 rounded-md bg-slate-800/50 border border-slate-700/50">
+                  <div className="w-6 h-6 rounded-md bg-[hsl(var(--mint)/0.1)] flex items-center justify-center shrink-0">
+                    <div className="w-2 h-2 rounded-full bg-mint" />
+                  </div>
+                  <p className="text-sm text-slate-300">약 30초-1분 분량으로 답변해주세요</p>
                 </div>
               </div>
-              <div className="flex items-center justify-center gap-2">
-                <span className="text-3xl font-bold text-mint">{guideCountdown}</span>
-                <span className="text-sm text-muted-foreground">초 후 면접이 시작됩니다</span>
+              <div className="flex items-center justify-center gap-3">
+                <span className="text-4xl font-bold text-mint">{guideCountdown}</span>
+                <span className="text-sm text-slate-400">초 후 시작</span>
               </div>
             </motion.div>
           </motion.div>
@@ -791,45 +841,58 @@ export default function InterviewPage() {
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
         {!isInterviewStarted ? (
-          // Start Screen
-          <div className="h-full flex items-center justify-center">
+          // Start Screen - Premium Minimal
+          <div className="h-full flex items-center justify-center bg-[hsl(220,55%,6%)]">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               className="text-center max-w-lg"
             >
-              <div className="flex justify-center gap-4 mb-8">
-                {interviewerTypes.map((type, index) => (
-                  <motion.div
-                    key={type}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="w-20 h-20 rounded-2xl bg-gradient-to-br from-mint/20 to-soft-blue/20 flex items-center justify-center text-4xl"
-                  >
-                    {INTERVIEWER_BASE[type].emoji}
-                  </motion.div>
-                ))}
+              {/* Interviewer Cards */}
+              <div className="flex justify-center gap-4 mb-10">
+                {interviewerTypes.map((type, index) => {
+                  const interviewer = INTERVIEWER_BASE[type];
+                  return (
+                    <motion.div
+                      key={type}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="flex flex-col items-center gap-2 p-3 rounded-lg bg-slate-800/50 border border-slate-700/50 w-24"
+                    >
+                      <span className="text-2xl">{interviewer.emoji}</span>
+                      <span className="text-xs font-medium text-slate-300">
+                        {interviewerNames[type]}
+                      </span>
+                      <span className="text-[10px] text-slate-500">
+                        {interviewer.role}
+                      </span>
+                    </motion.div>
+                  );
+                })}
               </div>
-              <h1 className="font-display text-3xl font-bold text-foreground mb-4">
-                AI 면접을 시작할 준비가 되셨나요?
-              </h1>
-              <p className="text-muted-foreground mb-8">
-                3인의 AI 면접관이 실시간으로 질문합니다.
+
+              <h1 className="text-3xl font-semibold text-white mb-4 tracking-tight">
+                AI 면접을 시작할 준비가
                 <br />
-                마이크를 허용하고 면접을 시작해주세요.
+                <span className="text-mint">되셨나요?</span>
+              </h1>
+              <p className="text-slate-400 mb-10">
+                3인의 AI 면접관이 실시간으로 질문합니다
               </p>
               <div className="flex justify-center gap-4">
                 <Button
-                  size="xl"
-                  onClick={() => router.push("/interview/setup")}
-                  className="gap-2 bg-rose-600 hover:bg-rose-700 text-white shadow-none hover:shadow-[0_0_20px_rgba(225,29,72,0.4)] hover:scale-[1.02]"
+                  onClick={handleStartClick}
+                  className="h-12 px-6 rounded-md bg-slate-800/50 border border-slate-600 hover:bg-slate-700/50"
                 >
-                  설정 변경
+                  모의 면접
                 </Button>
-                <Button variant="mint" size="xl" onClick={handleStartClick} className="gap-2">
-                  <Mic className="w-5 h-5" />
-                  면접 시작하기
+                <Button
+                  onClick={() => router.push("/interview/setup")}
+                  className="h-12 px-8 rounded-lg bg-gradient-to-r from-[hsl(var(--mint))] to-[hsl(var(--mint-dark))] text-slate-900 hover:shadow-[var(--glow-mint)] transition-shadow"
+                >
+                  <Mic className="w-5 h-5 mr-2" />
+                  시작하기
                 </Button>
               </div>
             </motion.div>
@@ -851,48 +914,50 @@ export default function InterviewPage() {
                 return (
                   <motion.div
                     key={message.id}
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className={`flex gap-3 ${message.role === "user" ? "justify-end" : ""}`}
                   >
                     {message.role === "interviewer" && msgInterviewer && (
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-mint/20 to-soft-blue/20 flex items-center justify-center text-xl shrink-0">
-                        {msgInterviewer.emoji}
+                      <div className="w-10 h-10 rounded-lg bg-slate-800/50 border border-slate-700/50 flex items-center justify-center shrink-0">
+                        <span className="text-lg">{msgInterviewer.emoji}</span>
                       </div>
                     )}
                     <div className="flex flex-col gap-1 max-w-2xl">
                       <div
-                        className={`p-4 rounded-2xl ${
+                        className={`p-4 rounded-lg ${
                           message.role === "user"
-                            ? "bg-mint text-navy"
-                            : "bg-secondary/50"
+                            ? "bg-[hsl(var(--mint)/0.15)] border border-[hsl(var(--mint)/0.3)]"
+                            : "bg-slate-800/30 border border-slate-700/50"
                         }`}
                       >
                         {message.role === "interviewer" && msgInterviewer && (
-                          <p className="text-xs text-muted-foreground mb-1">
+                          <p className="text-xs text-slate-500 mb-2">
                             {msgInterviewerName} ({msgInterviewer.role})
                           </p>
                         )}
-                        <p className={message.role === "user" ? "text-navy" : "text-foreground"}>
+                        <p className={`text-sm leading-relaxed ${
+                          message.role === "user" ? "text-white" : "text-slate-200"
+                        }`}>
                           {message.content}
                         </p>
                       </div>
 
-                      {/* Inner thought bubble */}
+                      {/* Inner thought bubble - no emoji */}
                       {showInnerThoughts && message.innerThought && (
                         <motion.div
-                          initial={{ opacity: 0, scale: 0.9 }}
+                          initial={{ opacity: 0, scale: 0.95 }}
                           animate={{ opacity: 1, scale: 1 }}
-                          className="ml-4 p-3 rounded-xl bg-violet-500/10 border border-violet-500/20"
+                          className="ml-4 p-3 rounded-lg bg-violet-500/10 border border-violet-500/20"
                         >
                           <p className="text-xs text-violet-400 italic">
-                            💭 {message.innerThought}
+                            {message.innerThought}
                           </p>
                         </motion.div>
                       )}
                     </div>
                     {message.role === "user" && (
-                      <div className="w-10 h-10 rounded-xl bg-mint/20 flex items-center justify-center shrink-0">
+                      <div className="w-10 h-10 rounded-lg bg-[hsl(var(--mint)/0.1)] border border-[hsl(var(--mint)/0.3)] flex items-center justify-center shrink-0">
                         <User className="w-5 h-5 text-mint" />
                       </div>
                     )}
@@ -903,16 +968,18 @@ export default function InterviewPage() {
               {/* Processing indicator */}
               {isProcessing && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-mint/20 to-soft-blue/20 flex items-center justify-center text-xl">
-                    {currentInterviewer.emoji}
+                  <div className="w-10 h-10 rounded-lg bg-slate-800/50 border border-slate-700/50 flex items-center justify-center">
+                    <span className="text-lg animate-pulse">
+                      {currentInterviewer.emoji}
+                    </span>
                   </div>
-                  <div className="bg-secondary/50 px-4 py-3 rounded-2xl">
-                    <p className="text-xs text-muted-foreground mb-2">{statusMessage}</p>
+                  <div className="bg-slate-800/30 border border-slate-700/50 px-4 py-3 rounded-lg">
+                    <p className="text-xs text-slate-500 mb-2">{statusMessage}</p>
                     <div className="flex gap-1">
                       {[0, 1, 2].map((i) => (
                         <motion.span
                           key={i}
-                          className="w-2 h-2 bg-mint rounded-full"
+                          className="w-1.5 h-1.5 bg-mint rounded-full"
                           animate={{ opacity: [0.4, 1, 0.4] }}
                           transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
                         />
@@ -931,8 +998,8 @@ export default function InterviewPage() {
               </div>
             )}
 
-            {/* Input controls */}
-            <div className="border-t border-border/50 p-4 bg-background/80 backdrop-blur-sm">
+            {/* Input controls - Premium */}
+            <div className="border-t border-[hsl(220,40%,15%)] p-4 bg-[hsl(220,55%,6%)]">
               {/* Recording visualization */}
               {isRecording && (
                 <motion.div
@@ -947,18 +1014,18 @@ export default function InterviewPage() {
                     timeElapsed={120 - timeRemaining}
                   />
                   <div className="text-center mt-2">
-                    <p className="text-sm text-muted-foreground">
-                      🎤 녹음 중... {formatTime(120 - timeRemaining)}
+                    <p className="text-sm text-slate-400">
+                      녹음 중… {formatTime(120 - timeRemaining)}
                     </p>
                   </div>
                 </motion.div>
               )}
-              {/* Timer Progress Bar */}
+              {/* Timer Progress Bar - Mint Gradient */}
               {timerActive && (
                 <div className="mb-4">
-                  <div className="h-1 bg-secondary rounded-full overflow-hidden">
+                  <div className="h-1 bg-slate-800 overflow-hidden rounded-full">
                     <motion.div
-                      className={`h-full ${timerWarning ? "bg-destructive" : "bg-mint"}`}
+                      className={`h-full ${timerWarning ? "bg-red-500" : "bg-gradient-to-r from-[hsl(var(--mint))] to-[hsl(var(--mint-dark))]"}`}
                       initial={{ width: "100%" }}
                       animate={{ width: `${timerProgress}%` }}
                       transition={{ duration: 0.5 }}
@@ -968,17 +1035,17 @@ export default function InterviewPage() {
               )}
 
               <div className="space-y-4">
-                {/* Voice Input - Primary (Always visible) */}
+                {/* Voice Input - Primary */}
                 <div className="flex flex-col items-center gap-4">
                   {/* Audio level visualization */}
                   {isRecording && (
-                    <div className="flex items-center gap-1 h-8">
-                      {[...Array(20)].map((_, i) => (
+                    <div className="flex items-center gap-0.5 h-8">
+                      {[...Array(24)].map((_, i) => (
                         <motion.div
                           key={i}
                           className="w-1 bg-mint rounded-full"
                           animate={{
-                            height: audioLevel > i * 5 ? `${8 + Math.random() * 16}px` : "4px",
+                            height: audioLevel > i * 4 ? `${8 + Math.random() * 20}px` : "4px",
                           }}
                           transition={{ duration: 0.1 }}
                         />
@@ -987,20 +1054,22 @@ export default function InterviewPage() {
                   )}
 
                   <Button
-                    variant={isRecording ? "destructive" : "mint"}
-                    size="xl"
                     onClick={isRecording ? stopRecording : startRecording}
                     disabled={isProcessing}
-                    className="w-48 gap-2"
+                    className={`w-48 h-12 rounded-lg transition-all ${
+                      isRecording
+                        ? "bg-red-500/20 border border-red-500/50 text-red-400 hover:bg-red-500/30"
+                        : "bg-gradient-to-r from-[hsl(var(--mint))] to-[hsl(var(--mint-dark))] text-slate-900 hover:shadow-[var(--glow-mint)]"
+                    }`}
                   >
                     {isRecording ? (
                       <>
-                        <MicOff className="w-5 h-5" />
-                        녹음 중지
+                        <MicOff className="w-5 h-5 mr-2" />
+                        중지
                       </>
                     ) : (
                       <>
-                        <Mic className="w-5 h-5" />
+                        <Mic className="w-5 h-5 mr-2" />
                         음성으로 답변
                       </>
                     )}
@@ -1012,23 +1081,21 @@ export default function InterviewPage() {
                       animate={{ opacity: 1 }}
                       className="text-sm text-mint"
                     >
-                      🔴 녹음 중... 답변을 마친 후 버튼을 눌러주세요.
+                      녹음 중… 답변을 마친 후 버튼을 눌러주세요
                     </motion.p>
                   )}
-                </div>
 
-                {/* Text Input Toggle Button */}
-                <div className="flex justify-center">
+                  {/* Text input toggle - compact link style below voice button */}
                   <button
                     onClick={() => setShowTextInput(!showTextInput)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/50 hover:bg-secondary transition-all text-sm text-muted-foreground hover:text-foreground"
+                    className="text-xs text-slate-500 hover:text-mint transition-colors flex items-center gap-1"
                   >
-                    <Keyboard className="w-4 h-4" />
+                    <Keyboard className="w-3.5 h-3.5" />
                     {showTextInput ? "텍스트 입력 숨기기" : "텍스트로 답변하기"}
                   </button>
                 </div>
 
-                {/* Text Input - Secondary (Toggleable) */}
+
                 <AnimatePresence>
                   {showTextInput && (
                     <motion.div
@@ -1043,36 +1110,21 @@ export default function InterviewPage() {
                         value={textInput}
                         onChange={(e) => setTextInput(e.target.value)}
                         onKeyDown={(e) => e.key === "Enter" && !isProcessing && handleTextSubmit()}
-                        placeholder="텍스트로 답변 입력..."
+                        placeholder="텍스트로 답변…"
                         disabled={isProcessing}
-                        className="flex-1 px-4 py-3 rounded-xl bg-secondary/50 border border-border focus:border-mint focus:ring-1 focus:ring-mint outline-none transition-all placeholder:text-muted-foreground/50"
+                        className="flex-1 px-4 py-3 rounded-lg bg-slate-800/50 border border-slate-700/50 focus:border-[hsl(var(--mint)/0.5)] outline-none transition-all placeholder:text-slate-500 text-sm"
                       />
                       <Button
-                        variant="mint"
-                        size="lg"
                         onClick={handleTextSubmit}
                         disabled={!textInput.trim() || isProcessing}
-                        className="gap-2"
+                        className="h-12 px-6 rounded-lg bg-[hsl(var(--mint)/0.2)] border border-[hsl(var(--mint)/0.3)] text-mint hover:bg-[hsl(var(--mint)/0.3)]"
                       >
-                        <Send className="w-4 h-4" />
+                        <Send className="w-4 h-4 mr-2" />
                         전송
                       </Button>
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </div>
-              {/* Inner thoughts toggle */}
-              <div className="flex justify-center mt-4">
-                <button
-                  onClick={() => setShowInnerThoughts(!showInnerThoughts)}
-                  className={`text-xs px-3 py-1.5 rounded-full transition-all ${
-                    showInnerThoughts
-                      ? "bg-violet-500/20 text-violet-400"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  💭 면접관 속마음 {showInnerThoughts ? "숨기기" : "보기"}
-                </button>
               </div>
             </div>
           </div>

@@ -332,27 +332,27 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-display text-3xl font-bold text-foreground mb-2">
+          <h1 className="text-2xl font-semibold mb-1">
             대시보드
           </h1>
-          <p className="text-muted-foreground">
-            면접 연습 현황과 성장 추이를 확인하세요
+          <p className="text-sm text-muted-foreground">
+            면접 연습 현황
           </p>
         </div>
-        <Link href="/interview/setup">
-          <Button variant="mint" size="lg" className="gap-2">
-            <Play className="w-5 h-5" />
-            면접 시작하기
+        <Link href="/interview/welcome">
+          <Button variant="mint" className="h-9 px-4 gap-2 rounded-sm">
+            <Play className="w-4 h-4" />
+            면접 시작
           </Button>
         </Link>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-4 gap-4 mb-6">
         {statsConfig.map((stat, index) => (
           <motion.div
             key={stat.label}
@@ -360,22 +360,22 @@ export default function DashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: index * 0.1 }}
           >
-            <Card className="p-6">
-              <div className="flex items-start justify-between mb-4">
+            <Card className="p-4 bg-[hsl(220,50%,8%)] shadow-[0_1px_3px_rgba(0,0,0,0.3)] border-none">
+              <div className="flex items-start justify-between mb-3">
                 <div
-                  className={`w-12 h-12 rounded-xl ${
+                  className={`w-10 h-10 rounded-sm ${
                     stat.color === "mint" ? "bg-mint/10" : "bg-soft-blue/10"
                   } flex items-center justify-center`}
                 >
                   <stat.icon
-                    className={`w-6 h-6 ${
+                    className={`w-5 h-5 ${
                       stat.color === "mint" ? "text-mint" : "text-soft-blue"
                     }`}
                   />
                 </div>
                 {stat.change && (
                   <span
-                    className={`text-sm font-medium ${
+                    className={`text-xs font-semibold ${
                       stat.color === "mint" ? "text-mint" : "text-soft-blue"
                     }`}
                   >
@@ -383,67 +383,67 @@ export default function DashboardPage() {
                   </span>
                 )}
               </div>
-              <div className="flex items-baseline gap-1">
-                <span className="font-display text-3xl font-bold text-foreground">
+              <div className="flex items-baseline gap-1 mb-1">
+                <span className="text-2xl font-semibold text-foreground">
                   {stat.value}
                 </span>
-                <span className="text-muted-foreground">{stat.suffix}</span>
+                <span className="text-xs text-muted-foreground">{stat.suffix}</span>
               </div>
-              <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
+              <p className="text-xs text-muted-foreground">{stat.label}</p>
             </Card>
           </motion.div>
         ))}
       </div>
 
       {/* Charts Row */}
-      <div className="grid lg:grid-cols-2 gap-8 mb-8">
+      <div className="grid grid-cols-2 gap-4 mb-6">
         {/* Score Trend Chart */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.4 }}
         >
-          <Card className="p-6">
-            <h2 className="font-display text-xl font-bold text-foreground mb-6">
+          <Card className="p-4 bg-[hsl(220,50%,8%)] shadow-[0_2px_8px_rgba(0,0,0,0.4)] border-none">
+            <h2 className="text-lg font-semibold mb-4">
               점수 추이
             </h2>
             {scoreHistory.length > 0 ? (
-              <div className="h-64">
+              <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={scoreHistory}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(220,40%,15%)" />
                     <XAxis
                       dataKey="date"
-                      tick={{ fill: "#9CA3AF", fontSize: 12 }}
-                      axisLine={{ stroke: "#374151" }}
+                      tick={{ fill: "hsl(220,15%,55%)", fontSize: 11 }}
+                      axisLine={{ stroke: "hsl(220,40%,15%)" }}
                     />
                     <YAxis
                       domain={[0, 100]}
-                      tick={{ fill: "#9CA3AF", fontSize: 12 }}
-                      axisLine={{ stroke: "#374151" }}
+                      tick={{ fill: "hsl(220,15%,55%)", fontSize: 11 }}
+                      axisLine={{ stroke: "hsl(220,40%,15%)" }}
                     />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: "#1F2937",
-                        border: "1px solid #374151",
-                        borderRadius: "8px",
+                        backgroundColor: "hsl(220,50%,8%)",
+                        border: "1px solid hsl(220,40%,15%)",
+                        borderRadius: "2px",
                       }}
-                      labelStyle={{ color: "#F3F4F6" }}
+                      labelStyle={{ color: "hsl(220,20%,95%)" }}
                     />
                     <Line
                       type="monotone"
                       dataKey="score"
                       stroke="#00D9A5"
-                      strokeWidth={3}
-                      dot={{ fill: "#00D9A5", strokeWidth: 2, r: 4 }}
-                      activeDot={{ r: 6, fill: "#00D9A5" }}
+                      strokeWidth={2}
+                      dot={{ fill: "#00D9A5", r: 3 }}
+                      activeDot={{ r: 5, fill: "#00D9A5" }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
             ) : (
-              <div className="h-64 flex items-center justify-center text-muted-foreground">
-                면접 기록이 없습니다. 첫 면접을 시작해보세요!
+              <div className="h-56 flex items-center justify-center text-sm text-muted-foreground">
+                면접 기록이 없습니다
               </div>
             )}
           </Card>
@@ -455,37 +455,37 @@ export default function DashboardPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.5 }}
         >
-          <Card className="p-6">
-            <h2 className="font-display text-xl font-bold text-foreground mb-6">
+          <Card className="p-4 bg-[hsl(220,50%,8%)] shadow-[0_2px_8px_rgba(0,0,0,0.4)] border-none">
+            <h2 className="text-lg font-semibold mb-4">
               평균 역량 분석
             </h2>
             {stats.totalInterviews > 0 ? (
-              <div className="h-64">
+              <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <RadarChart data={avgCompetency}>
-                    <PolarGrid stroke="#374151" />
+                    <PolarGrid stroke="hsl(220,40%,15%)" />
                     <PolarAngleAxis
                       dataKey="subject"
-                      tick={{ fill: "#9CA3AF", fontSize: 11 }}
+                      tick={{ fill: "hsl(220,15%,55%)", fontSize: 10 }}
                     />
                     <PolarRadiusAxis
                       angle={90}
                       domain={[0, 100]}
-                      tick={{ fill: "#6B7280", fontSize: 10 }}
+                      tick={{ fill: "hsl(220,15%,45%)", fontSize: 9 }}
                     />
                     <Radar
                       name="평균 점수"
                       dataKey="score"
                       stroke="#00D9A5"
                       fill="#00D9A5"
-                      fillOpacity={0.3}
+                      fillOpacity={0.25}
                       strokeWidth={2}
                     />
                   </RadarChart>
                 </ResponsiveContainer>
               </div>
             ) : (
-              <div className="h-64 flex items-center justify-center text-muted-foreground">
+              <div className="h-56 flex items-center justify-center text-sm text-muted-foreground">
                 역량 분석 데이터가 없습니다
               </div>
             )}
@@ -494,47 +494,46 @@ export default function DashboardPage() {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-4 gap-4">
         {/* Quick Start Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.6 }}
-          className="lg:col-span-2"
+          className="col-span-3"
         >
-          <Card className="p-8 relative overflow-hidden">
+          <Card className="p-6 bg-[hsl(220,50%,8%)] shadow-[0_1px_3px_rgba(0,0,0,0.3)] border-none relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-mint/5 to-soft-blue/5" />
             <div className="relative">
-              <h2 className="font-display text-2xl font-bold text-foreground mb-4">
+              <h2 className="text-xl font-semibold mb-3">
                 빠른 시작
               </h2>
-              <p className="text-muted-foreground mb-6">
-                AI 면접관과 실전처럼 연습해보세요. 실시간 음성 대화로 면접
-                역량을 향상시킬 수 있습니다.
+              <p className="text-sm text-muted-foreground mb-4">
+                AI 면접관과 실전처럼 연습해보세요
               </p>
-              <div className="grid sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <Link href="/interview/setup">
-                  <div className="p-6 rounded-2xl bg-card/50 border border-border/50 hover:border-mint/50 transition-colors cursor-pointer group">
-                    <div className="w-14 h-14 rounded-2xl bg-mint/10 flex items-center justify-center mb-4 group-hover:bg-mint/20 transition-colors">
-                      <Mic className="w-7 h-7 text-mint" />
+                  <div className="p-4 bg-card/50 border border-border/40 hover:border-mint/50 transition-colors cursor-pointer group">
+                    <div className="w-12 h-12 rounded-sm bg-mint/10 flex items-center justify-center mb-3 group-hover:bg-mint/20 transition-colors">
+                      <Mic className="w-6 h-6 text-mint" />
                     </div>
-                    <h3 className="font-semibold text-foreground mb-1">
+                    <h3 className="font-semibold text-sm mb-1">
                       AI 모의면접
                     </h3>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       3명의 면접관과 실전 연습
                     </p>
                   </div>
                 </Link>
                 <Link href="/interview/setup">
-                  <div className="p-6 rounded-2xl bg-card/50 border border-border/50 hover:border-soft-blue/50 transition-colors cursor-pointer group">
-                    <div className="w-14 h-14 rounded-2xl bg-soft-blue/10 flex items-center justify-center mb-4 group-hover:bg-soft-blue/20 transition-colors">
-                      <FileText className="w-7 h-7 text-soft-blue" />
+                  <div className="p-4 bg-card/50 border border-border/40 hover:border-soft-blue/50 transition-colors cursor-pointer group">
+                    <div className="w-12 h-12 rounded-sm bg-soft-blue/10 flex items-center justify-center mb-3 group-hover:bg-soft-blue/20 transition-colors">
+                      <FileText className="w-6 h-6 text-soft-blue" />
                     </div>
-                    <h3 className="font-semibold text-foreground mb-1">
+                    <h3 className="font-semibold text-sm mb-1">
                       이력서 기반 면접
                     </h3>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       이력서 분석 맞춤 질문
                     </p>
                   </div>
@@ -550,33 +549,33 @@ export default function DashboardPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.7 }}
         >
-          <Card className="p-6 h-full">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="font-display text-xl font-bold text-foreground">
+          <Card className="p-4 h-full bg-[hsl(220,50%,8%)] shadow-[0_1px_3px_rgba(0,0,0,0.3)] border-none">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">
                 최근 면접
               </h2>
               {recentResults.length > 0 && (
                 <Link
                   href="/dashboard/history"
-                  className="text-sm text-mint hover:underline flex items-center gap-1"
+                  className="text-xs text-mint hover:underline flex items-center gap-1"
                 >
                   전체 보기
-                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className="w-3 h-3" />
                 </Link>
               )}
             </div>
             {recentResults.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {recentResults.map((result) => (
                   <Link key={result.id} href={`/dashboard/${result.session_id}`}>
-                    <div className="p-4 rounded-xl bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-foreground truncate max-w-[140px]">
+                    <div className="p-3 bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-medium text-foreground truncate max-w-[120px]">
                           {getJobLabel(
                             result.interview_sessions?.job_type || ""
                           )}
                         </span>
-                        <span className="text-sm font-bold text-mint">
+                        <span className="text-xs font-bold text-mint">
                           {result.overall_score}점
                         </span>
                       </div>
@@ -594,14 +593,14 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="h-48 flex flex-col items-center justify-center text-center">
-                <Target className="w-12 h-12 text-muted-foreground/50 mb-4" />
-                <p className="text-muted-foreground text-sm">
+                <Target className="w-10 h-10 text-muted-foreground/50 mb-3" />
+                <p className="text-muted-foreground text-xs mb-3">
                   아직 면접 기록이 없습니다
                 </p>
-                <Link href="/interview/setup" className="mt-4">
-                  <Button variant="outline" size="sm" className="gap-2">
+                <Link href="/interview/setup">
+                  <Button variant="outline" className="h-8 px-3 text-xs gap-2 rounded-sm">
                     첫 면접 시작하기
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className="w-3 h-3" />
                   </Button>
                 </Link>
               </div>
